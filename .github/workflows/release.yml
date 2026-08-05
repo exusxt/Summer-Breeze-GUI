@@ -88,3 +88,4 @@ jobs:
             gui/dist/**/*.deb
             gui/dist/**/*.blockmap
             gui/dist/*.yml
+            !gui/dist/win-unpacked/**
