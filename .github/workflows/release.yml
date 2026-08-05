@@ -77,14 +77,14 @@ jobs:
         run: npx electron-builder ${{ matrix.args }} --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-${{ matrix.os }}
           path: |
-            dist/**/*.exe
-            dist/**/*.dmg
-            dist/**/*.zip
-            dist/**/*.AppImage
-            dist/**/*.deb
-            dist/**/*.blockmap
-            dist/*.yml
+            gui/dist/**/*.exe
+            gui/dist/**/*.dmg
+            gui/dist/**/*.zip
+            gui/dist/**/*.AppImage
+            gui/dist/**/*.deb
+            gui/dist/**/*.blockmap
+            gui/dist/*.yml
