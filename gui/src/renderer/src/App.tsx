@@ -5,14 +5,14 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Download, RefreshCw, Shuffle } from 'lucide-react'
-import type { AppConfig, DeviceStatus, DownloadProgress, UpdateState } from '../../shared/types'
-import { DEPLOYER_VERSION } from '../../shared/types'
+import type { AppConfig, DeviceStatus, DownloadProgress, PythonStatus, UpdateState } from '../../shared/types'
+import { DEPLOYER_VERSION, MIN_PYTHON } from '../../shared/types'
 import { applyTheme, isGalleryTheme, THEMES, type ThemeId } from './lib'
 import { BACKGROUNDS } from './backgrounds'
 import { TitleBar } from './components/TitleBar'
 import { Header } from './components/Header'
 import { Sidebar, type ScreenId } from './components/Sidebar'
-import { Button, Panel, ProgressBar } from './components/ui'
+import { Button, Panel, ProgressBar, Spinner } from './components/ui'
 import { UpdateToast } from './components/UpdateToast'
 import { StatusScreen } from './screens/StatusScreen'
 import { LocalRomsScreen } from './screens/LocalRomsScreen'
@@ -42,6 +42,10 @@ export default function App(): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false)
   const [galleryBg, setGalleryBg] = useState<string | null>(null)
   const [deployerDenied, setDeployerDenied] = useState(false)
+  const [python, setPython] = useState<PythonStatus | null>(null)
+  const [pythonDenied, setPythonDenied] = useState(false)
+  const [installingPython, setInstallingPython] = useState(false)
+  const [pythonMsg, setPythonMsg] = useState<string | null>(null)
   const [download, setDownload] = useState<{ running: boolean; progress: DownloadProgress | null; status: string; error: string | null }>({
     running: false,
     progress: null,
@@ -68,6 +72,7 @@ export default function App(): React.JSX.Element {
     void refreshStatus()
     window.api.getVersion().then(setVersion).catch(() => undefined)
     window.api.windowIsMaximized().then(setMaximized).catch(() => undefined)
+    window.api.pythonStatus().then(setPython).catch(() => undefined)
     const offMax = window.api.onWindowMaximized(setMaximized)
     return offMax
   }, [refreshStatus])
@@ -118,6 +123,30 @@ export default function App(): React.JSX.Element {
 
   const deployerMissing = config ? !config.deployerPresent : false
   const deployerBlocked = deployerMissing && deployerDenied
+  const pythonMissing = python ? !python.installed && !pythonDenied : false
+
+  const installPythonNow = async (): Promise<void> => {
+    setInstallingPython(true)
+    setPythonMsg(null)
+    try {
+      const res = await window.api.installPython()
+      setPythonMsg(res.message)
+      if (res.relaunch) return
+      const st = await window.api.pythonStatus()
+      setPython(st)
+      if (st.installed) await refreshStatus()
+    } catch (e) {
+      setPythonMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setInstallingPython(false)
+    }
+  }
+
+  const checkPythonAgain = async (): Promise<void> => {
+    const st = await window.api.retryBridge()
+    setPython(st)
+    if (st.installed) await refreshStatus()
+  }
 
   const startDownload = async (): Promise<void> => {
     setDownload({ running: true, progress: null, status: 'Starting download…', error: null })
@@ -179,6 +208,36 @@ export default function App(): React.JSX.Element {
           onClose={() => void window.api.windowClose()}
         />
       </div>
+
+      {pythonMissing ? (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 p-6">
+          <div className="w-full max-w-md rounded-xl border border-sc64-border bg-sc64-panel p-6 shadow-2xl">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-sc64-warn" />
+              <h2 className="text-base font-bold text-sc64-text">Python is required</h2>
+            </div>
+            <p className="mt-2 text-sm text-sc64-muted">
+              Summer Breeze runs the official Summer Breeze CLI through Python {MIN_PYTHON} or newer.
+              {python?.version
+                ? ` A Python ${python.version} installation was found, which is too old.`
+                : ' No Python installation was found on this system.'}
+            </p>
+            {pythonMsg ? <Panel className="mt-3 border-sc64-accent/40 text-xs text-sc64-text">{pythonMsg}</Panel> : null}
+            <div className="mt-4 flex flex-col gap-2">
+              <Button variant="primary" disabled={installingPython} onClick={() => void installPythonNow()}>
+                {installingPython ? <Spinner className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                {installingPython ? 'Installing Python…' : 'Install Python'}
+              </Button>
+              <Button variant="outline" disabled={installingPython} onClick={() => void checkPythonAgain()}>
+                Check again
+              </Button>
+              <Button variant="ghost" onClick={() => setPythonDenied(true)}>
+                No thanks — I'll install it myself
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {deployerMissing && !deployerDenied && !download.running ? (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-6">

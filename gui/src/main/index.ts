@@ -9,6 +9,7 @@ import { PythonBridge } from './bridge'
 import { downloadDeployer } from './download'
 import { DEPLOYER_EXE } from '../shared/types'
 import { initUpdater, checkForUpdates, installUpdate } from './updater'
+import { detectPython, installPython } from './python'
 
 let mainWindow: BrowserWindow | null = null
 let bridge: PythonBridge | null = null
@@ -52,12 +53,20 @@ async function seedDeployer(): Promise<void> {
   }
 }
 
-function startBridge(): void {
+async function startBridge(): Promise<void> {
+  const py = await detectPython()
+  if (!py.installed) {
+    console.warn(
+      `[bridge] Python ${py.reason === 'too-old' ? `v${py.version} (need 3.10+)` : 'not found'} — bridge not started`
+    )
+    return
+  }
   const root = repoRoot()
-  const python = process.env['SUMMER_BREEZE_PYTHON'] || 'python'
+  const python = py.executable ?? process.env['SUMMER_BREEZE_PYTHON'] ?? 'python'
   const bridgePath = join(root, 'gui', 'bridge.py')
   const env = { ...process.env } as NodeJS.ProcessEnv
   if (existsSync(deployerStorePath())) env['SUMMER_BREEZE_DEPLOYER'] = deployerStorePath()
+  bridge?.dispose()
   bridge = new PythonBridge(python, [bridgePath, `--gui-version=${app.getVersion()}`], root, env)
   bridge.start()
   bridge.on('event', (ev) => {
@@ -106,6 +115,23 @@ function registerIpc(): void {
   })
   ipcMain.handle('updates:install', () => {
     installUpdate()
+  })
+
+  // Python environment: probe, install, and (re)start the bridge once a
+  // compatible interpreter is available.
+  ipcMain.handle('app:pythonStatus', () => detectPython())
+  ipcMain.handle('app:installPython', async () => {
+    const res = await installPython()
+    if (res.relaunch) {
+      // A fresh PATH entry only applies to new processes; restart to pick it up.
+      app.relaunch()
+      app.exit(0)
+    }
+    return res
+  })
+  ipcMain.handle('app:retryBridge', async () => {
+    await startBridge()
+    return detectPython()
   })
 
   // Downloads sc64deployer.exe from the official release into the persistent
@@ -182,7 +208,7 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   registerIpc()
   await seedDeployer()
-  startBridge()
+  await startBridge()
   createWindow()
   if (mainWindow) {
     initUpdater(mainWindow)

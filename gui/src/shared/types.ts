@@ -93,6 +93,18 @@ export interface AppConfig {
   guiVersion: string
 }
 
+/** Minimum Python version the bridge requires (checked against sys.version_info). */
+export const MIN_PYTHON = '3.10'
+
+/** Result of the main-process Python environment probe. A missing interpreter
+ * keeps the bridge itself from starting, so this is checked from main. */
+export interface PythonStatus {
+  installed: boolean
+  version: string | null
+  executable: string | null
+  reason: 'missing' | 'too-old' | null
+}
+
 /** Streamed events pushed from the bridge to the renderer. */
 export type BridgeEvent =
   | { type: 'progress'; data: UploadProgress }
