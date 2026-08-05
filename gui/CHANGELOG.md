@@ -5,6 +5,15 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.0] - 2026-08-06
+
+### Added
+
+- Download the SC64 menu from the Update SC64 Menu screen: pick the official N64FlashcartMenu release or TheLeggett's custom build (which adds background-music support), and the latest `sc64menu.n64` is fetched from GitHub into the app's persistent menu_versions/ folder
+- The downloaded menu is validated as a real N64 ROM and then shows up in the regular version list, ready for the existing backup-and-upload flow; a per-source "already downloaded" marker avoids re-downloading the same build
+
+[Compare v0.4.1...v0.5.0](https://github.com/exusxt/Summer-Breeze-GUI/compare/v0.4.1...v0.5.0)
+
 ## [v0.4.1] - 2026-08-06
 
 ### Fixed
