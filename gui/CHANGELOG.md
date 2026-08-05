@@ -5,6 +5,19 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.2.0] - 2026-08-05
+
+### Added
+
+- macOS builds (dmg + zip, x64 and arm64) and Linux builds (AppImage, deb, rpm, pacman, x64 and arm64) published from the release workflow
+- Automatic update notifications: the app checks for new versions on startup and through a title-bar button, downloads updates in the background and lets you install on demand
+- Windows portable builds self-update by downloading the newer portable exe and swapping it in on restart
+- Installed builds update through electron-updater against the same GitHub release
+
+### Infra
+
+- Release workflow now builds on Ubuntu, macOS and Windows in parallel and publishes each platform's artifacts to the same GitHub release
+
 ## [v0.1.6] - 2026-08-05
 
 ### Added
