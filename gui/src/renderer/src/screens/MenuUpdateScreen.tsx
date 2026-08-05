@@ -4,9 +4,9 @@
  * Menu" command.
  */
 import { useEffect, useState } from 'react'
-import { Disc3, ShieldCheck, ShieldAlert } from 'lucide-react'
-import type { DeviceStatus, MenuFile } from '../../../shared/types'
-import { Button, Checkbox, Panel, Spinner } from '../components/ui'
+import { Disc3, Download, RefreshCw, ShieldCheck, ShieldAlert } from 'lucide-react'
+import type { DeviceStatus, DownloadProgress, MenuFile, MenuReleaseInfo, MenuSource } from '../../../shared/types'
+import { Button, Checkbox, Panel, ProgressBar, Spinner } from '../components/ui'
 import { ConsolePanel } from '../components/ConsolePanel'
 import { useOperationLog } from '../hooks'
 import { cn } from '../lib'
@@ -19,6 +19,12 @@ export function MenuUpdateScreen(): React.JSX.Element {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [releases, setReleases] = useState<MenuReleaseInfo[] | null>(null)
+  const [releaseError, setReleaseError] = useState<string | null>(null)
+  const [selectedRepo, setSelectedRepo] = useState<MenuSource | null>('official')
+  const [downloading, setDownloading] = useState(false)
+  const [downloadMsg, setDownloadMsg] = useState<string | null>(null)
+  const [dlProgress, setDlProgress] = useState<DownloadProgress | null>(null)
   const { lines, clear } = useOperationLog()
 
   const refresh = async (): Promise<void> => {
@@ -32,14 +38,33 @@ export function MenuUpdateScreen(): React.JSX.Element {
     }
   }
 
+  const refreshReleases = async (): Promise<void> => {
+    setReleaseError(null)
+    try {
+      setReleases(await window.api.menuReleases())
+    } catch (e) {
+      setReleaseError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   useEffect(() => {
     void refresh()
+    void refreshReleases()
   }, [])
 
   useEffect(() => {
     return window.api.onEvent((ev) => {
       if (ev.type === 'log' && ev.level === 'error') setResult((prev) => prev ?? { ok: false, message: ev.message })
     })
+  }, [])
+
+  useEffect(() => {
+    const offProgress = window.api.onMenuDownloadProgress((p) => setDlProgress(p))
+    const offStatus = window.api.onMenuDownloadStatus((msg) => setDownloadMsg(msg))
+    return () => {
+      offProgress()
+      offStatus()
+    }
   }, [])
 
   const list = menus ?? []
@@ -62,6 +87,24 @@ export function MenuUpdateScreen(): React.JSX.Element {
       setResult({ ok: false, message: e instanceof Error ? e.message : String(e) })
     } finally {
       setRunning(false)
+    }
+  }
+
+  const downloadMenu = async (): Promise<void> => {
+    if (!selectedRepo || downloading) return
+    setDownloading(true)
+    setDownloadMsg(null)
+    setDlProgress(null)
+    try {
+      const res = await window.api.menuDownload(selectedRepo)
+      setDownloadMsg(res.message)
+      if (res.ok) {
+        await Promise.all([refresh(), refreshReleases()])
+      }
+    } catch (e) {
+      setDownloadMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -94,6 +137,60 @@ export function MenuUpdateScreen(): React.JSX.Element {
           <ShieldAlert className="h-3.5 w-3.5" /> This will backup the current menu, then upload the selected one
         </div>
         <p className="text-sm text-sc64-muted">Menu files (.z64/.n64/.v64) live in the app's menu_versions/ folder.</p>
+      </Panel>
+
+      <Panel>
+        <div className="mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-sc64-muted">
+            <Download className="h-3.5 w-3.5" /> Download a menu build
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => void refreshReleases()} disabled={downloading}>
+            <RefreshCw className="h-3.5 w-3.5" /> Check
+          </Button>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {releases?.map((r) => (
+            <Checkbox
+              key={r.repo}
+              label={<span className="flex items-center gap-2">{r.label}</span>}
+              hint={
+                r.error
+                  ? r.error
+                  : `${r.tag ?? 'unknown'} · ${r.size ? formatBytes(r.size) : 'unknown size'}${r.present ? ' · already downloaded' : ''}`
+              }
+              checked={selectedRepo === r.repo}
+              onChange={(v) => setSelectedRepo(v ? r.repo : null)}
+              disabled={downloading}
+            />
+          ))}
+        </div>
+        {releaseError ? <p className="mt-2 text-xs text-sc64-bad">{releaseError}</p> : null}
+        {releases === null ? (
+          <p className="mt-2 flex items-center gap-2 text-xs text-sc64-muted">
+            <Spinner className="h-3 w-3" /> Checking GitHub…
+          </p>
+        ) : null}
+        <div className="mt-3 flex items-center gap-3">
+          <Button variant="primary" size="sm" onClick={() => void downloadMenu()} disabled={downloading || !selectedRepo}>
+            {downloading ? <Spinner className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+            {downloading ? 'Downloading…' : 'Download'}
+          </Button>
+          {downloading && dlProgress && dlProgress.total > 0 ? (
+            <div className="flex-1">
+              <ProgressBar value={dlProgress.received} max={dlProgress.total} label="Downloading" />
+            </div>
+          ) : downloading ? (
+            <div className="flex-1">
+              <ProgressBar value={0} max={0} indeterminate label="Downloading" />
+            </div>
+          ) : null}
+          {downloadMsg ? <span className="text-xs text-sc64-muted">{downloadMsg}</span> : null}
+        </div>
+        {selectedRepo === 'custom' && !downloading ? (
+          <p className="mt-2 text-xs text-sc64-muted">
+            The custom build is TheLeggett's fork of N64FlashcartMenu and adds background-music support.
+          </p>
+        ) : null}
       </Panel>
 
       {menus === null ? (

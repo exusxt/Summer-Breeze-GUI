@@ -116,6 +116,33 @@ export interface MenuFile {
   size: number
 }
 
+/** Which menu download source the user picked: the official N64FlashcartMenu
+ * release or TheLeggett's custom fork (adds background-music support). */
+export type MenuSource = 'official' | 'custom'
+
+/** A downloadable SC64 menu build for one source, as resolved by main. */
+export interface MenuReleaseInfo {
+  repo: MenuSource
+  label: string
+  repoUrl: string
+  /** Release tag (null when the lookup failed). */
+  tag: string | null
+  publishedAt: string | null
+  /** Size in bytes of the sc64menu.n64 asset. */
+  size: number | null
+  /** Whether the matching file already exists in menu_versions/. */
+  present: boolean
+  /** Lookup error, when the GitHub API call failed for this source. */
+  error: string | null
+}
+
+/** Result of a menu download request. */
+export interface MenuDownloadResult {
+  ok: boolean
+  message: string
+  fileName?: string
+}
+
 /** An MP3 in menu_music/. */
 export interface MusicFile {
   name: string

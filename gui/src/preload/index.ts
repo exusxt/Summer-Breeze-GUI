@@ -3,7 +3,7 @@
 // method is a thin ipcRenderer.invoke/send wrapper over the main-process IPC.
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuFile, MusicFile, PythonStatus, RomsAddResult, RtcResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
+import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuDownloadResult, MenuFile, MenuReleaseInfo, MenuSource, MusicFile, PythonStatus, RomsAddResult, RtcResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
 
 const api = {
   // Python-bridge passthrough (request/response).
@@ -23,6 +23,10 @@ const api = {
   musicRemove: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('sb:musicRemove'),
   syncRtc: (): Promise<RtcResult> => ipcRenderer.invoke('sb:syncRtc'),
   browse: (path?: string): Promise<SdEntry[]> => ipcRenderer.invoke('sb:browse', path ? { path } : {}),
+
+  // SC64 menu downloads.
+  menuReleases: (): Promise<MenuReleaseInfo[]> => ipcRenderer.invoke('menu:releases'),
+  menuDownload: (repo: MenuSource): Promise<MenuDownloadResult> => ipcRenderer.invoke('menu:download', { repo }),
 
   // App helpers.
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
@@ -61,6 +65,16 @@ const api = {
     const listener = (_e: IpcRendererEvent, message: string): void => cb(message)
     ipcRenderer.on('sb:downloadStatus', listener)
     return () => ipcRenderer.removeListener('sb:downloadStatus', listener)
+  },
+  onMenuDownloadProgress: (cb: (p: DownloadProgress) => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, p: DownloadProgress): void => cb(p)
+    ipcRenderer.on('menu:downloadProgress', listener)
+    return () => ipcRenderer.removeListener('menu:downloadProgress', listener)
+  },
+  onMenuDownloadStatus: (cb: (message: string) => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, message: string): void => cb(message)
+    ipcRenderer.on('menu:downloadStatus', listener)
+    return () => ipcRenderer.removeListener('menu:downloadStatus', listener)
   },
   onUpdate: (cb: (state: UpdateState) => void): (() => void) => {
     const listener = (_e: IpcRendererEvent, state: UpdateState): void => cb(state)

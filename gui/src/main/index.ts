@@ -7,8 +7,9 @@ import { copyFile, mkdir, readdir, stat } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 import { PythonBridge } from './bridge'
 import { downloadDeployer } from './download'
-import { DEPLOYER_EXE, type LocalRom, type RomHeaderInfo, type RomIssue, type RomsAddResult } from '../shared/types'
+import { DEPLOYER_EXE, type LocalRom, type MenuDownloadResult, type MenuReleaseInfo, type MenuSource, type RomHeaderInfo, type RomIssue, type RomsAddResult } from '../shared/types'
 import { inspectN64File, isN64Ext, romIdentity } from './n64validate'
+import { downloadMenu, MENU_SOURCES, menuReleaseInfo } from './menuDownload'
 import { initUpdater, checkForUpdates, installUpdate } from './updater'
 import { detectPython, installPython } from './python'
 
@@ -320,6 +321,35 @@ function registerIpc(): void {
       }
     }
     return { added, skipped, warnings, errors }
+  })
+
+  // Resolves the latest downloadable sc64menu.n64 for both menu sources. Each
+  // entry carries its GitHub tag/size and whether the matching file is already
+  // in menu_versions/ (so the UI can mark it as present without re-downloading).
+  ipcMain.handle('menu:releases', async (): Promise<MenuReleaseInfo[]> => {
+    const dir = menuVersionsDir()
+    return Promise.all(MENU_SOURCES.map((s) => menuReleaseInfo(s.repo, dir)))
+  })
+
+  // Downloads the latest sc64menu.n64 from a chosen source into the persistent
+  // menu_versions/ folder. Progress and status stream to the renderer over the
+  // menu:downloadProgress / menu:downloadStatus channels; on success the file
+  // appears in the normal menu list so the existing backup-and-upload flow can
+  // flash it.
+  ipcMain.handle('menu:download', async (_e, params: { repo?: MenuSource }): Promise<MenuDownloadResult> => {
+    const repo: MenuSource = params?.repo === 'custom' ? 'custom' : 'official'
+    const dir = menuVersionsDir()
+    const send = (channel: string, payload: unknown): void => {
+      mainWindow?.webContents.send(channel, payload)
+    }
+    try {
+      const { fileName } = await downloadMenu(repo, dir, (p) => send('menu:downloadProgress', p))
+      send('menu:downloadStatus', `Downloaded ${fileName}`)
+      return { ok: true, message: `Downloaded ${fileName}`, fileName }
+    } catch (err) {
+      send('menu:downloadStatus', err instanceof Error ? err.message : String(err))
+      return { ok: false, message: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   // Frameless-window controls.
