@@ -5,6 +5,18 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.0] - 2026-08-05
+
+### Added
+
+- The app now checks for a compatible Python installation (3.10+) on startup and blocks with a clear prompt if it is missing
+- One-click Python install from the prompt: silent winget/installer on Windows, the python.org wizard on macOS, and package-manager guidance on Linux
+- The bridge restarts automatically once Python is available (via the prompt's "Check again")
+
+### Infra
+
+- README rewritten to describe the GUI, supported platforms and auto-update behavior, and credits the original Summer Breeze developer
+
 ## [v0.2.0] - 2026-08-05
 
 ### Added
