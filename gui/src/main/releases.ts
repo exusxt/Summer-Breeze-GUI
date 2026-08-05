@@ -69,14 +69,14 @@ async function webLatestTag(ownerRepo: string): Promise<string | null> {
  * Resolves the app's own latest release through the github.com web endpoints
  * (no API rate limit): the latest tag comes from the /releases/latest redirect,
  * and the portable download URL is built from the known asset name. electron-
- * builder publishes the portable exe as Summer-Breeze-<version>.exe for this
- * app (see the portable.artifactName in electron-builder.yml).
+ * builder publishes the portable exe as Summer-Breeze-GUI-<version>.exe for
+ * this app (see the portable.artifactName in electron-builder.yml).
  */
 export async function getAppLatestRelease(): Promise<AppUpdateInfo> {
   const tag = await webLatestTag(APP_REPO)
   if (!tag) throw new Error('Unable to check for updates')
   const version = tag.replace(/^v/i, '')
-  const name = `Summer-Breeze-${version}.exe`
+  const name = `Summer-Breeze-GUI-${version}.exe`
   const [owner, repo] = APP_REPO.split('/')
   const downloadUrl = `${GITHUB_WEB}/${owner}/${repo}/releases/latest/download/${name}`
   return {

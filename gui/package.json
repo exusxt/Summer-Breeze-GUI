@@ -1,6 +1,6 @@
 {
   "name": "summer-breeze-gui",
-  "productName": "Summer Breeze",
+  "productName": "Summer Breeze GUI",
   "version": "0.5.0",
   "description": "A graphical front-end for Summer Breeze, the SummerCart64 ROM manager CLI.",
   "homepage": "https://github.com/exusxt/Summer-Breeze-GUI",

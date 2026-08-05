@@ -216,7 +216,7 @@ export default function App(): React.JSX.Element {
               <h2 className="text-base font-bold text-sc64-text">Python is required</h2>
             </div>
             <p className="mt-2 text-sm text-sc64-muted">
-              Summer Breeze runs the official Summer Breeze CLI through Python {MIN_PYTHON} or newer.
+              Summer Breeze GUI runs the official Summer Breeze CLI through Python {MIN_PYTHON} or newer.
               {python?.version
                 ? ` A Python ${python.version} installation was found, which is too old.`
                 : ' No Python installation was found on this system.'}
@@ -246,7 +246,7 @@ export default function App(): React.JSX.Element {
               <h2 className="text-base font-bold text-sc64-text">sc64deployer.exe not found</h2>
             </div>
             <p className="mt-2 text-sm text-sc64-muted">
-              Summer Breeze needs the official <span className="font-mono text-sc64-text">sc64deployer.exe</span> tool from
+              Summer Breeze GUI needs the official <span className="font-mono text-sc64-text">sc64deployer.exe</span> tool from
               the SummerCart64 project to communicate with your cart. It is missing from the app folder.
             </p>
             {download.error ? <Panel className="mt-3 border-sc64-bad/40 text-xs text-sc64-bad">{download.error}</Panel> : null}

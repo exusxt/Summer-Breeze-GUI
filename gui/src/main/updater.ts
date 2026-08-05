@@ -55,8 +55,8 @@ function isNewerVersion(latest: string, current: string): boolean {
 // build name, then any non-setup .exe as a last resort for older layouts.
 function pickPortableAsset(assets: ReleaseAsset[], version: string): ReleaseAsset | undefined {
   return (
-    assets.find((a) => a.name === `Summer-Breeze-${version}.exe`) ??
-    assets.find((a) => a.name === `Summer Breeze ${version}.exe`) ??
+    assets.find((a) => a.name === `Summer-Breeze-GUI-${version}.exe`) ??
+    assets.find((a) => a.name === `Summer Breeze GUI ${version}.exe`) ??
     assets.find((a) => /\.exe$/i.test(a.name) && !/setup/i.test(a.name))
   )
 }

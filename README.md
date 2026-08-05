@@ -1,4 +1,4 @@
-# Summer Breeze
+# Summer Breeze GUI
 
 [![CI](https://github.com/exusxt/Summer-Breeze-GUI/actions/workflows/ci.yml/badge.svg)](https://github.com/exusxt/Summer-Breeze-GUI/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -27,8 +27,8 @@ Get the latest build from the [Releases page](https://github.com/exusxt/Summer-B
 
 | Platform | Artifacts |
 | --- | --- |
-| Windows | `Summer-Breeze-Setup-x.y.z.exe` (NSIS installer) and `Summer-Breeze-x.y.z.exe` (portable, no install) |
-| macOS | `Summer-Breeze-x.y.z.dmg` / `.zip` (Intel + Apple Silicon) |
+| Windows | `Summer-Breeze-GUI-Setup-x.y.z.exe` (NSIS installer) and `Summer-Breeze-GUI-x.y.z.exe` (portable, no install) |
+| macOS | `Summer-Breeze-GUI-x.y.z.dmg` / `.zip` (Intel + Apple Silicon) |
 | Linux | `.AppImage`, `.deb`, `.rpm` and `.pacman` (x64 + arm64) |
 
 Auto-update behavior:
@@ -64,7 +64,7 @@ for your platform, then start it. The first screen will warn you if the
 ## Directory Structure
 
 ```
-Summer-Breeze/
+Summer-Breeze-GUI/
 ├── gui/                  # Electron GUI source (bridge.py, src/, package.json)
 ├── summerbreeze.py       # Summer Breeze CLI (used as the GUI's backend)
 ├── sc64deployer          # Official SC64 deployer (macOS/Linux)

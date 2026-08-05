@@ -25,10 +25,10 @@ export function Header({
     <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-sc64-accent/40 shadow-glow">
-          <img src={appIcon} alt="Summer Breeze" className="h-full w-full object-cover" />
+          <img src={appIcon} alt="Summer Breeze GUI" className="h-full w-full object-cover" />
         </div>
         <div>
-          <h1 className="text-lg font-bold leading-tight text-sc64-text">Summer Breeze</h1>
+          <h1 className="text-lg font-bold leading-tight text-sc64-text">Summer Breeze GUI</h1>
           <p className="text-xs text-sc64-muted">Manage ROMs on your SummerCart64 flash cart</p>
         </div>
       </div>

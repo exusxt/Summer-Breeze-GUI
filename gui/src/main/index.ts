@@ -13,6 +13,15 @@ import { downloadMenu, MENU_SOURCES, menuReleaseInfo } from './menuDownload'
 import { initUpdater, checkForUpdates, installUpdate } from './updater'
 import { detectPython, installPython } from './python'
 
+// The userData folder keeps its original name ("Summer Breeze") even though the
+// product was renamed to "Summer Breeze GUI", so the persistent deployer, roms,
+// menu_versions and menu_music folders survive the rebrand without a re-copy.
+try {
+  app.setPath('userData', join(app.getPath('appData'), 'Summer Breeze'))
+} catch {
+  // Best-effort: fall back to the default (productName-based) userData folder.
+}
+
 let mainWindow: BrowserWindow | null = null
 let bridge: PythonBridge | null = null
 
@@ -370,7 +379,7 @@ function createWindow(): void {
     height: 820,
     minWidth: 940,
     minHeight: 620,
-    title: 'Summer Breeze',
+    title: 'Summer Breeze GUI',
     backgroundColor: '#0b1020',
     frame: false,
     show: false,

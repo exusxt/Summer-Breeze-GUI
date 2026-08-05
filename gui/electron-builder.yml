@@ -1,5 +1,5 @@
 appId: com.summerbreeze.gui
-productName: Summer Breeze
+productName: Summer Breeze GUI
 directories:
   buildResources: build
   output: dist
@@ -21,13 +21,13 @@ win:
     - nsis
     - portable
   icon: build/icon.png
-  executableName: SummerBreeze
+  executableName: SummerBreezeGUI
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  artifactName: Summer-Breeze-Setup-${version}.${ext}
+  artifactName: Summer-Breeze-GUI-Setup-${version}.${ext}
 portable:
-  artifactName: Summer-Breeze-${version}.${ext}
+  artifactName: Summer-Breeze-GUI-${version}.${ext}
 mac:
   icon: build/icon.png
   target:
@@ -43,12 +43,12 @@ mac:
   hardenedRuntime: false
   gatekeeperAssess: false
 linux:
-  # Space-free install dir (/opt/summer-breeze): Chromium's SUID sandbox cannot
-  # run from a path containing spaces.
-  executableName: summer-breeze
+  # Space-free install dir (/opt/summer-breeze-gui): Chromium's SUID sandbox
+  # cannot run from a path containing spaces.
+  executableName: summer-breeze-gui
   icon: build/icon.png
   desktop:
-    Name: Summer Breeze
+    Name: Summer Breeze GUI
   target:
     - target: AppImage
       arch:

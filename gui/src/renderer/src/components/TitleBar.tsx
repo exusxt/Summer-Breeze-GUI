@@ -107,8 +107,8 @@ export function TitleBar({
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       <div className="mr-3 flex items-center gap-2">
-        <img src={appIcon} alt="Summer Breeze" className="h-5 w-5 rounded-md object-cover" />
-        <span className="text-xs font-semibold tracking-wide text-sc64-text">Summer Breeze</span>
+        <img src={appIcon} alt="Summer Breeze GUI" className="h-5 w-5 rounded-md object-cover" />
+        <span className="text-xs font-semibold tracking-wide text-sc64-text">Summer Breeze GUI</span>
         {version ? <span className="text-[10px] font-normal text-sc64-muted">v{version}</span> : null}
       </div>
 
