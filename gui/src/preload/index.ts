@@ -3,7 +3,7 @@
 // method is a thin ipcRenderer.invoke/send wrapper over the main-process IPC.
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuFile, MusicFile, PythonStatus, RtcResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
+import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuFile, MusicFile, PythonStatus, RomsAddResult, RtcResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
 
 const api = {
   // Python-bridge passthrough (request/response).
@@ -28,6 +28,7 @@ const api = {
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
   reveal: (path: string): Promise<void> => ipcRenderer.invoke('app:reveal', path),
   downloadDeployer: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('sb:downloadDeployer'),
+  addRoms: (): Promise<RomsAddResult | null> => ipcRenderer.invoke('roms:add'),
   pythonStatus: (): Promise<PythonStatus> => ipcRenderer.invoke('app:pythonStatus'),
   installPython: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('app:installPython'),
   retryBridge: (): Promise<PythonStatus> => ipcRenderer.invoke('app:retryBridge'),

@@ -46,6 +46,13 @@ if _DEPLOYER_OVERRIDE:
     if _candidate.exists() and not Path(summerbreeze.SC64_DEPLOYER).exists():
         summerbreeze.SC64_DEPLOYER = _candidate
 
+# Same idea for ROMs: packaged builds keep them in a persistent userData folder
+# because resources may be read-only (Program Files) or re-extracted on every
+# launch (portable). The untouched CLI default is SCRIPT_DIR/roms.
+_ROM_DIR_OVERRIDE = os.environ.get("SUMMER_BREEZE_ROMS_DIR")
+if _ROM_DIR_OVERRIDE:
+    summerbreeze.LOCAL_ROMS_DIR = Path(_ROM_DIR_OVERRIDE)
+
 REAL_STDOUT = sys.stdout
 
 

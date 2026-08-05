@@ -17,6 +17,54 @@ export interface LocalRom {
   name: string
   path: string
   size: number
+  /** Parsed N64 header; null when the file is not a recognized N64 ROM. Only
+   * set by the main-process local-roms listing, not by the Python bridge. */
+  header?: RomHeaderInfo | null
+  /** Validation issues attached to the file by the local-roms listing. */
+  issues?: RomIssue[]
+}
+
+/** N64 ROM byte order: .z64 is big-endian, .v64 is 16-bit byte-swapped and .n64 is little-endian (word-reversed). */
+export type RomByteOrder = 'z64' | 'v64' | 'n64'
+
+/** Logical region derived from the N64 header's destination-code byte (0x3E). */
+export type RomRegion = 'usa' | 'japan' | 'pal' | 'korea' | 'china' | 'brazil' | 'other' | 'unknown'
+
+/** Display labels for the N64 region codes. */
+export const ROM_REGION_LABELS: Record<RomRegion, string> = {
+  usa: 'USA',
+  japan: 'Japan',
+  pal: 'PAL',
+  korea: 'Korea',
+  china: 'China',
+  brazil: 'Brazil',
+  other: 'Other',
+  unknown: 'Unknown'
+}
+
+/** Parsed fields of a valid N64 ROM header. */
+export interface RomHeaderInfo {
+  byteOrder: RomByteOrder
+  title: string
+  gameCode: string
+  region: RomRegion
+  version: string
+  crc1: string
+  crc2: string
+}
+
+/** A validation finding on a ROM file. */
+export interface RomIssue {
+  code: 'not-n64' | 'ext-mismatch' | 'bad-size'
+  severity: 'warn' | 'error'
+}
+
+/** Outcome of copying selected ROM files into the local roms/ folder. */
+export interface RomsAddResult {
+  added: string[]
+  skipped: string[]
+  warnings: string[]
+  errors: string[]
 }
 
 /** Combined device + SD card status, plus firmware info when available. */

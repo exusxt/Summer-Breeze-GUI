@@ -1,13 +1,14 @@
 // Electron main-process entry point: app lifecycle, the frameless window and
 // the IPC surface that forwards renderer calls to the Python bridge.
 
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { existsSync } from 'node:fs'
-import { copyFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { copyFile, mkdir, readdir, stat } from 'node:fs/promises'
+import { basename, extname, join, resolve } from 'node:path'
 import { PythonBridge } from './bridge'
 import { downloadDeployer } from './download'
-import { DEPLOYER_EXE } from '../shared/types'
+import { DEPLOYER_EXE, type LocalRom, type RomHeaderInfo, type RomIssue, type RomsAddResult } from '../shared/types'
+import { inspectN64File, isN64Ext, romIdentity } from './n64validate'
 import { initUpdater, checkForUpdates, installUpdate } from './updater'
 import { detectPython, installPython } from './python'
 
@@ -38,6 +39,40 @@ function deployerStorePath(): string {
   return join(deployerStoreDir(), DEPLOYER_EXE)
 }
 
+/** Where local ROMs live. Packaged builds keep them in userData so they survive
+ * portable re-extraction and stay writable under Program Files; development
+ * uses the repo's roms/ folder directly (the CLI's default). */
+function romsDir(): string {
+  if (app.isPackaged) return join(app.getPath('userData'), 'roms')
+  return join(repoRoot(), 'roms')
+}
+
+/** On the first packaged launch, copy any ROMs shipped in resources into the
+ * persistent roms folder so the bridge (pointed at it via the env override)
+ * still sees them across restarts. */
+async function seedRoms(): Promise<void> {
+  if (!app.isPackaged) return
+  const dest = romsDir()
+  const src = join(repoRoot(), 'roms')
+  if (!existsSync(src)) return
+  try {
+    await mkdir(dest, { recursive: true })
+    for (const entry of await readdir(src)) {
+      const s = join(src, entry)
+      const d = join(dest, entry)
+      if ((await stat(s)).isFile() && !existsSync(d)) {
+        try {
+          await copyFile(s, d)
+        } catch {
+          // best-effort seed
+        }
+      }
+    }
+  } catch {
+    // best-effort seed
+  }
+}
+
 /** Copies the persistent deployer next to summerbreeze.py if one exists. */
 async function seedDeployer(): Promise<void> {
   const stored = deployerStorePath()
@@ -66,6 +101,7 @@ async function startBridge(): Promise<void> {
   const bridgePath = join(root, 'gui', 'bridge.py')
   const env = { ...process.env } as NodeJS.ProcessEnv
   if (existsSync(deployerStorePath())) env['SUMMER_BREEZE_DEPLOYER'] = deployerStorePath()
+  if (app.isPackaged) env['SUMMER_BREEZE_ROMS_DIR'] = romsDir()
   bridge?.dispose()
   bridge = new PythonBridge(python, [bridgePath, `--gui-version=${app.getVersion()}`], root, env)
   bridge.start()
@@ -82,7 +118,6 @@ function registerIpc(): void {
   const rpc = {
     'sb:config': 'config',
     'sb:status': 'status',
-    'sb:listLocalRoms': 'list_local_roms',
     'sb:listCart': 'list_cart',
     'sb:allSdRoms': 'all_sd_roms',
     'sb:compare': 'compare',
@@ -103,6 +138,19 @@ function registerIpc(): void {
       return bridge.request(method, params ?? {})
     })
   }
+
+  // Local-roms listing is enriched with N64 header info by reading the first
+  // 0x100 bytes of each file in the main process.
+  ipcMain.handle('sb:listLocalRoms', async (): Promise<LocalRom[]> => {
+    if (!bridge) throw new Error('Python bridge is not running')
+    const raw = (await bridge.request('list_local_roms', {})) as LocalRom[]
+    const out: LocalRom[] = []
+    for (const r of raw) {
+      const v = await inspectN64File(r.path)
+      out.push({ ...r, header: v.header, issues: v.issues })
+    }
+    return out
+  })
 
   ipcMain.handle('app:getVersion', () => app.getVersion())
   ipcMain.handle('app:reveal', (_e, path: string) => {
@@ -166,6 +214,92 @@ function registerIpc(): void {
     }
   })
 
+  // Opens a native file picker and copies the selected N64 ROMs into the local
+  // roms/ folder (persistent userData in packaged builds). Each file is
+  // validated against its N64 header first: non-N64 files are rejected, byte
+  // order/size mismatches produce warnings but still copy, and files that
+  // duplicate an existing (or just-selected) ROM are skipped. Returns null when
+  // the user cancels the dialog.
+  const ROM_EXTENSIONS = ['.z64', '.n64', '.v64']
+  ipcMain.handle('roms:add', async (): Promise<RomsAddResult | null> => {
+    const options: Electron.OpenDialogOptions = {
+      title: 'Add ROMs',
+      buttonLabel: 'Add',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'N64 ROMs', extensions: ['z64', 'n64', 'v64'] }]
+    }
+    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths.length === 0) return null
+
+    const dest = romsDir()
+    try {
+      await mkdir(dest, { recursive: true })
+    } catch {
+      return { added: [], skipped: [], warnings: [], errors: [`Could not create ${dest}`] }
+    }
+
+    // Identity (game code + header CRCs) of every ROM already in the folder, so
+    // renamed/re-encoded copies are caught as duplicates.
+    const existingIdentity = new Map<string, string>()
+    for (const entry of await readdir(dest)) {
+      const p = join(dest, entry)
+      if (!isN64Ext(p)) continue
+      try {
+        const v = await inspectN64File(p)
+        if (v.header) existingIdentity.set(romIdentity(v.header), entry)
+      } catch {
+        // skip unreadable files
+      }
+    }
+
+    const added: string[] = []
+    const skipped: string[] = []
+    const warnings: string[] = []
+    const errors: string[] = []
+    const batchIdentity = new Map<string, string>()
+    for (const src of result.filePaths) {
+      const name = basename(src)
+      if (!ROM_EXTENSIONS.includes(extname(src).toLowerCase())) {
+        skipped.push(`${name} (not an N64 ROM)`)
+        continue
+      }
+      let v: { header: RomHeaderInfo | null; issues: RomIssue[] }
+      try {
+        v = await inspectN64File(src)
+      } catch (e) {
+        errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`)
+        continue
+      }
+      if (!v.header) {
+        errors.push(`${name}: not an N64 ROM`)
+        continue
+      }
+      for (const issue of v.issues) {
+        if (issue.code === 'ext-mismatch') warnings.push(`${name}: byte order doesn't match its extension`)
+        if (issue.code === 'bad-size') warnings.push(`${name}: non-standard size`)
+      }
+      const identity = romIdentity(v.header)
+      const existing = existingIdentity.get(identity) ?? batchIdentity.get(identity)
+      if (existing) {
+        skipped.push(`${name} (already present: ${existing})`)
+        continue
+      }
+      const target = join(dest, name)
+      if (existsSync(target)) {
+        skipped.push(`${name} (already present)`)
+        continue
+      }
+      try {
+        await copyFile(src, target)
+        added.push(name)
+        batchIdentity.set(identity, name)
+      } catch (e) {
+        errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    }
+    return { added, skipped, warnings, errors }
+  })
+
   // Frameless-window controls.
   ipcMain.handle('win:minimize', () => mainWindow?.minimize())
   ipcMain.handle('win:toggleMaximize', () => {
@@ -214,6 +348,7 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   registerIpc()
   await seedDeployer()
+  await seedRoms()
   await startBridge()
   createWindow()
   if (mainWindow) {
