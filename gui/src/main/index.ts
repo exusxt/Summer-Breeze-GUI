@@ -122,16 +122,19 @@ function registerIpc(): void {
   ipcMain.handle('app:pythonStatus', () => detectPython())
   ipcMain.handle('app:installPython', async () => {
     const res = await installPython()
-    if (res.relaunch) {
-      // A fresh PATH entry only applies to new processes; restart to pick it up.
-      app.relaunch()
-      app.exit(0)
+    if (res.ok) {
+      // Registry-based detection finds a freshly installed interpreter inside
+      // the running process, so (re)start the bridge right away — no restart.
+      await startBridge()
     }
     return res
   })
   ipcMain.handle('app:retryBridge', async () => {
-    await startBridge()
-    return detectPython()
+    // Re-probe from scratch: detection is cached, and a stale "missing" result
+    // would otherwise stick around after the user installed Python manually.
+    const st = await detectPython(true)
+    if (st.installed) await startBridge()
+    return st
   })
 
   // Downloads sc64deployer.exe from the official release into the persistent
@@ -154,6 +157,9 @@ function registerIpc(): void {
       } catch {
         // Best-effort mirror; the bridge already uses the persistent copy.
       }
+      // The bridge was started without a deployer, so restart it to pick up the
+      // freshly downloaded binary via SUMMER_BREEZE_DEPLOYER — no app restart.
+      await startBridge()
       return { ok: true, message: `Installed ${exePath}` }
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : String(err) }

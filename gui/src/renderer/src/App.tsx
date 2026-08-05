@@ -131,7 +131,6 @@ export default function App(): React.JSX.Element {
     try {
       const res = await window.api.installPython()
       setPythonMsg(res.message)
-      if (res.relaunch) return
       const st = await window.api.pythonStatus()
       setPython(st)
       if (st.installed) await refreshStatus()

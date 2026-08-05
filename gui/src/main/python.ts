@@ -8,6 +8,7 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { app } from 'electron'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { downloadFile } from './download'
 import type { PythonStatus } from '../shared/types'
@@ -19,12 +20,11 @@ const VERSION_SCRIPT = "import sys; print(f'{sys.version_info.major}.{sys.versio
 const PYTHON_VERSION = '3.12.8'
 const MIN_PYTHON = [3, 10]
 
-/** Install flow outcome: relaunch is set when the app must restart to pick up
- * a freshly installed interpreter (its PATH entry only applies to new processes). */
+/** Install flow outcome. The interpreter is picked up in-session afterwards, so
+ * no restart is needed. */
 export interface InstallResult {
   ok: boolean
   message: string
-  relaunch: boolean
 }
 
 let cached: PythonStatus | null = null
@@ -72,8 +72,42 @@ export async function detectPython(force = false): Promise<PythonStatus> {
 function pythonCandidates(): string[] {
   const env = process.env['SUMMER_BREEZE_PYTHON']
   if (env) return [env]
-  if (process.platform === 'win32') return ['python', 'py', 'python3']
+  if (process.platform === 'win32') return [...registryPythonPaths(), 'python', 'py', 'python3']
   return ['python3', 'python']
+}
+
+/**
+ * Full paths to interpreters read straight from the Windows registry (HKCU
+ * before HKLM, newest version first). A running process only samples PATH at
+ * launch, so an interpreter installed while the app is open stays invisible to
+ * PATH-based probes; the registry is queried live and works either way.
+ */
+function registryPythonPaths(): string[] {
+  if (process.platform !== 'win32') return []
+  const paths: string[] = []
+  const hives = ['HKCU', 'HKLM']
+  const versions = ['3.14', '3.13', '3.12', '3.11', '3.10']
+  for (const version of versions) {
+    for (const hive of hives) {
+      const key = `${hive}\\SOFTWARE\\Python\\PythonCore\\${version}\\InstallPath`
+      try {
+        const r = spawnSync('reg', ['query', key, '/ve'], { encoding: 'utf8', windowsHide: true, timeout: 5000 })
+        if (r.status !== 0) continue
+        const line = String(r.stdout ?? '')
+          .split('\n')
+          .map((l) => l.trim())
+          .find((l) => l.includes('REG_SZ'))
+        if (!line) continue
+        const dir = line.split('REG_SZ')[1]?.trim().replace(/\\+$/, '')
+        if (!dir) continue
+        const exe = join(dir, 'python.exe')
+        if (!paths.includes(exe) && existsSync(exe)) paths.push(exe)
+      } catch {
+        // Registry unreadable — fall through to the PATH-based probes.
+      }
+    }
+  }
+  return paths
 }
 
 /** Runs a command, resolving with true when it exits cleanly (winget case). */
@@ -127,7 +161,7 @@ async function installWindows(): Promise<InstallResult> {
       5 * 60 * 1000
     )
     if (ok && (await waitForPython(60 * 1000))) {
-      return { ok: true, message: 'Python installed. Restarting Summer Breeze…', relaunch: true }
+      return { ok: true, message: 'Python installed.' }
     }
   }
 
@@ -137,7 +171,7 @@ async function installWindows(): Promise<InstallResult> {
   try {
     await downloadFile(url, dest)
   } catch (e) {
-    return { ok: false, message: `Could not download the Python installer: ${e instanceof Error ? e.message : String(e)}`, relaunch: false }
+    return { ok: false, message: `Could not download the Python installer: ${e instanceof Error ? e.message : String(e)}` }
   }
   // Per-user install that adds Python to PATH; runs detached because the
   // installer spawns child processes that must not keep the pipe open.
@@ -152,9 +186,9 @@ async function installWindows(): Promise<InstallResult> {
     } catch {
       // ignore
     }
-    return { ok: true, message: 'Python installed. Restarting Summer Breeze…', relaunch: true }
+    return { ok: true, message: 'Python installed.' }
   }
-  return { ok: false, message: 'The Python installer did not complete. Run it manually, then relaunch Summer Breeze.', relaunch: false }
+  return { ok: false, message: 'The Python installer did not complete. Run it manually, then click “Check again”.' }
 }
 
 async function installMac(): Promise<InstallResult> {
@@ -163,30 +197,28 @@ async function installMac(): Promise<InstallResult> {
   try {
     await downloadFile(url, dest)
   } catch (e) {
-    return { ok: false, message: `Could not download the Python installer: ${e instanceof Error ? e.message : String(e)}`, relaunch: false }
+    return { ok: false, message: `Could not download the Python installer: ${e instanceof Error ? e.message : String(e)}` }
   }
   // `open` hands the package to the Installer GUI, which the user completes.
   spawn('open', [dest], { detached: true, stdio: 'ignore' }).unref()
   return {
     ok: true,
-    message: 'Opened the Python installer. Complete the wizard, then click “Check again”.',
-    relaunch: false
+    message: 'Opened the Python installer. Complete the wizard, then click “Check again”.'
   }
 }
 
 async function installLinux(): Promise<InstallResult> {
   return {
     ok: true,
-    message:
-      'Install Python 3.10+ with your package manager (e.g. `sudo apt install python3`), then click “Check again”.',
-    relaunch: false
+    message: 'Install Python 3.10+ with your package manager (e.g. `sudo apt install python3`), then click “Check again”.'
   }
 }
 
 /**
  * Installs a compatible Python for the current platform. Windows attempts a
- * silent install and only signals relaunch once detection succeeds; macOS and
- * Linux hand off to the user and report the expected next step.
+ * silent install and detects the result in-session (via the registry, so no
+ * restart is required); macOS and Linux hand off to the user and report the
+ * expected next step.
  */
 export async function installPython(): Promise<InstallResult> {
   if (process.platform === 'win32') return installWindows()
