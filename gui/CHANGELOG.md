@@ -5,6 +5,21 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.4.0] - 2026-08-06
+
+### Added
+
+- "Add ROMs" on the Local ROMs screen: pick any number of `.z64`, `.n64` or `.v64` files and they are copied into the app's persistent roms/ folder
+- N64 ROM verification when adding: files are checked against their header (magic word, byte order, title, game code and region); non-N64 files are rejected and byte-order/extension or size mismatches are reported as warnings while the copy still happens
+- Duplicate detection by game identity (game code + header CRCs), so a renamed or byte-ordered copy of a ROM you already have is skipped instead of imported again
+- The Local ROMs list now shows each ROM's title, game code, byte order and region, with a "not an N64 ROM" or "check" badge when validation finds a problem
+
+### Infra
+
+- CI actions upgraded to Node 24 (`actions/checkout@v5`, `actions/upload-artifact@v6`, `actions/setup-python@v6`) and the release workflow's artifact upload paths fixed
+
+[Compare v0.3.1...v0.4.0](https://github.com/exusxt/Summer-Breeze-GUI/compare/v0.3.1...v0.4.0)
+
 ## [v0.3.1] - 2026-08-05
 
 ### Fixed
