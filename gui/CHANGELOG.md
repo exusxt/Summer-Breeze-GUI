@@ -5,6 +5,15 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.1] - 2026-08-06
+
+### Changed
+
+- The app is now branded "Summer Breeze GUI": the title bar, header and window title use the new name, and the packaged executables are renamed (`SummerBreezeGUI.exe`, `Summer-Breeze-GUI-Setup-<version>.exe` installer and `Summer-Breeze-GUI-<version>.exe` portable); the portable auto-updater now looks for the new asset name
+- Existing user data is preserved: the app keeps using the same `%APPDATA%\Summer Breeze` folder, so local ROMs, downloaded menu builds, music and the deployer stay in place after the rename
+
+[Compare v0.5.0...v0.5.1](https://github.com/exusxt/Summer-Breeze-GUI/compare/v0.5.0...v0.5.1)
+
 ## [v0.5.0] - 2026-08-06
 
 ### Added
