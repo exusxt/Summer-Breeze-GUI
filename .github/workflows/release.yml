@@ -15,7 +15,17 @@ defaults:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            args: --linux
+          - os: macos-latest
+            args: --mac
+          - os: windows-latest
+            args: --win
     steps:
       - uses: actions/checkout@v5
 
@@ -33,6 +43,10 @@ jobs:
 
       - name: Build renderer/main
         run: npm run build
+
+      - name: Install Linux packaging tools
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools
 
       - name: Create/update GitHub release (tag builds only)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -60,13 +74,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        run: npx electron-builder ${{ matrix.args }} --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-windows
+          name: dist-${{ matrix.os }}
           path: |
             dist/**/*.exe
+            dist/**/*.dmg
+            dist/**/*.zip
+            dist/**/*.AppImage
+            dist/**/*.deb
             dist/**/*.blockmap
             dist/*.yml

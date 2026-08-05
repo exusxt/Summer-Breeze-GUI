@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path'
 import { PythonBridge } from './bridge'
 import { downloadDeployer } from './download'
 import { DEPLOYER_EXE } from '../shared/types'
+import { initUpdater, checkForUpdates, installUpdate } from './updater'
 
 let mainWindow: BrowserWindow | null = null
 let bridge: PythonBridge | null = null
@@ -99,6 +100,14 @@ function registerIpc(): void {
     if (path) void shell.showItemInFolder(path)
   })
 
+  // Manual triggers for the auto-updater.
+  ipcMain.handle('updates:check', () => {
+    checkForUpdates()
+  })
+  ipcMain.handle('updates:install', () => {
+    installUpdate()
+  })
+
   // Downloads sc64deployer.exe from the official release into the persistent
   // userData folder (survives portable re-extraction), then mirrors it next to
   // summerbreeze.py when possible. Progress/status are streamed to the renderer
@@ -175,6 +184,14 @@ app.whenReady().then(async () => {
   await seedDeployer()
   startBridge()
   createWindow()
+  if (mainWindow) {
+    initUpdater(mainWindow)
+    // Only auto-check for updates in packaged builds; the delay lets the
+    // window settle before the network request goes out.
+    setTimeout(() => {
+      if (app.isPackaged) checkForUpdates()
+    }, 5000)
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })

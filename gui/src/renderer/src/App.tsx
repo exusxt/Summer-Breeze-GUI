@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Download, RefreshCw, Shuffle } from 'lucide-react'
-import type { AppConfig, DeviceStatus, DownloadProgress } from '../../shared/types'
+import type { AppConfig, DeviceStatus, DownloadProgress, UpdateState } from '../../shared/types'
 import { DEPLOYER_VERSION } from '../../shared/types'
 import { applyTheme, isGalleryTheme, THEMES, type ThemeId } from './lib'
 import { BACKGROUNDS } from './backgrounds'
@@ -13,6 +13,7 @@ import { TitleBar } from './components/TitleBar'
 import { Header } from './components/Header'
 import { Sidebar, type ScreenId } from './components/Sidebar'
 import { Button, Panel, ProgressBar } from './components/ui'
+import { UpdateToast } from './components/UpdateToast'
 import { StatusScreen } from './screens/StatusScreen'
 import { LocalRomsScreen } from './screens/LocalRomsScreen'
 import { CartScreen } from './screens/CartScreen'
@@ -47,6 +48,8 @@ export default function App(): React.JSX.Element {
     status: '',
     error: null
   })
+  const [update, setUpdate] = useState<UpdateState | null>(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
 
   const refreshStatus = useCallback(async (): Promise<void> => {
     setRefreshing(true)
@@ -76,6 +79,16 @@ export default function App(): React.JSX.Element {
       offProgress()
       offStatus()
     }
+  }, [])
+
+  useEffect(() => {
+    const offUpdate = window.api.onUpdate((s) => {
+      setUpdate(s)
+      // A fresh state (available/downloading/etc.) should surface the toast
+      // again even if it was dismissed before.
+      setUpdateDismissed(false)
+    })
+    return offUpdate
   }, [])
 
   useEffect(() => {
@@ -158,6 +171,8 @@ export default function App(): React.JSX.Element {
           version={version}
           theme={theme}
           maximized={maximized}
+          update={update}
+          onCheckForUpdates={() => void window.api.checkForUpdates()}
           onThemeChange={setTheme}
           onMinimize={() => void window.api.windowMinimize()}
           onToggleMaximize={() => void window.api.windowToggleMaximize().then(setMaximized)}
@@ -260,6 +275,14 @@ export default function App(): React.JSX.Element {
           </footer>
         </div>
       </div>
+
+      {update && !updateDismissed ? (
+        <UpdateToast
+          update={update}
+          onDismiss={() => setUpdateDismissed(true)}
+          onInstall={() => void window.api.installUpdate()}
+        />
+      ) : null}
     </div>
   )
 }

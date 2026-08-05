@@ -8,12 +8,82 @@
 
 import { net } from 'electron'
 import { createWriteStream } from 'node:fs'
-import { copyFile, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readdir, rename, rm } from 'node:fs/promises'
+import * as https from 'node:https'
+import * as http from 'node:http'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import extract from 'extract-zip'
 import type { DownloadProgress } from '../shared/types'
 import { DEPLOYER_DOWNLOAD_URL, DEPLOYER_EXE } from '../shared/types'
+
+/** Cap on redirect hops (GitHub asset links can chain a few times, e.g. release
+ * redirect to CDN). Guards against redirect loops. */
+const MAX_REDIRECTS = 10
+
+/** Downloads a URL to destPath with progress callbacks, following redirects.
+ * Streams into a .part temp file and renames into place on success so an
+ * interrupted download never leaves a half-written file at the destination. */
+export async function downloadFile(
+  url: string,
+  destPath: string,
+  opts: { onProgress?: (p: DownloadProgress) => void; headers?: Record<string, string> } = {}
+): Promise<void> {
+  const headers: Record<string, string> = {
+    'User-Agent': 'summer-breeze-gui',
+    Accept: '*/*',
+    ...(opts.headers ?? {})
+  }
+  const res = await request(url, MAX_REDIRECTS, headers)
+  const total = Number(res.headers['content-length'] ?? 0)
+  let received = 0
+  await mkdir(dirname(destPath), { recursive: true })
+  const tmp = `${destPath}.part`
+  const stream = createWriteStream(tmp)
+  await new Promise<void>((resolve, reject) => {
+    res.on('data', (chunk: Buffer) => {
+      received += chunk.length
+      opts.onProgress?.({ received, total })
+    })
+    res.pipe(stream)
+    stream.on('finish', resolve)
+    stream.on('error', reject)
+    res.on('error', reject)
+  })
+  await rename(tmp, destPath)
+}
+
+/** Follows 3xx redirects up to MAX_REDIRECTS times; picks http/https by scheme. */
+function request(
+  url: string,
+  redirects: number,
+  headers: Record<string, string>
+): Promise<http.IncomingMessage> {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https:') ? https : http
+    const req = mod.get(url, { headers }, (res) => {
+      const status = res.statusCode ?? 0
+      if (status >= 300 && status < 400 && res.headers.location) {
+        res.resume()
+        if (redirects <= 0) {
+          reject(new Error('Too many redirects'))
+          return
+        }
+        const next = new URL(res.headers.location, url).toString()
+        request(next, redirects - 1, headers).then(resolve, reject)
+        return
+      }
+      if (status >= 400) {
+        res.resume()
+        reject(new Error(`HTTP ${status} for ${url}`))
+        return
+      }
+      resolve(res)
+    })
+    req.on('error', reject)
+    req.setTimeout(30000, () => req.destroy(new Error('Request timed out')))
+  })
+}
 
 /** Recursively finds the first file whose name matches; returns '' if absent. */
 async function findFile(dir: string, name: string): Promise<string> {

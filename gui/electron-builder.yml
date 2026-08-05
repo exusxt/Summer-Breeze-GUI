@@ -25,6 +25,51 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  artifactName: Summer-Breeze-Setup-${version}.${ext}
+portable:
+  artifactName: Summer-Breeze-${version}.${ext}
+mac:
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.utilities
+  hardenedRuntime: false
+  gatekeeperAssess: false
+linux:
+  # Space-free install dir (/opt/summer-breeze): Chromium's SUID sandbox cannot
+  # run from a path containing spaces.
+  executableName: summer-breeze
+  icon: build/icon.png
+  desktop:
+    Name: Summer Breeze
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+    - target: rpm
+      arch:
+        - x64
+        - arm64
+    - target: pacman
+      arch:
+        - x64
+        - arm64
+  category: Utility
+  maintainer: exusxt
+  synopsis: Manage ROMs on your SummerCart64 flash cart
+npmRebuild: false
 publish:
   provider: github
   owner: exusxt

@@ -97,3 +97,11 @@ export interface AppConfig {
 export type BridgeEvent =
   | { type: 'progress'; data: UploadProgress }
   | { type: 'log'; level: 'info' | 'warn' | 'error'; message: string }
+
+/** Live state of the auto-update flow, pushed from main over the sb:update channel. */
+export interface UpdateState {
+  state: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+  version?: string
+  percent?: number
+  message?: string
+}

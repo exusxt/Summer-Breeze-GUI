@@ -4,7 +4,9 @@
  * minimize/maximize/close controls, which the parent wires to window.api.
  */
 import { useEffect, useRef, useState } from 'react'
+import { Download } from 'lucide-react'
 import type { ThemeId } from '../lib'
+import type { UpdateState } from '../../../shared/types'
 import { THEME_IDS, THEME_NAMES, cn } from '../lib'
 import appIcon from '../assets/app-icon.png'
 
@@ -79,6 +81,8 @@ export function TitleBar({
   version,
   theme,
   maximized,
+  update,
+  onCheckForUpdates,
   onThemeChange,
   onMinimize,
   onToggleMaximize,
@@ -87,11 +91,16 @@ export function TitleBar({
   version: string
   theme: ThemeId
   maximized: boolean
+  update: UpdateState | null
+  onCheckForUpdates: () => void
   onThemeChange: (theme: ThemeId) => void
   onMinimize: () => void
   onToggleMaximize: () => void
   onClose: () => void
 }): React.JSX.Element {
+  const updateBusy = update?.state === 'checking' || update?.state === 'downloading' || update?.state === 'available'
+  const updateReady = update?.state === 'downloaded'
+
   return (
     <header
       className="flex h-10 shrink-0 select-none items-center gap-1 border-b border-sc64-border bg-sc64-panel2/70 pl-3 pr-1"
@@ -116,6 +125,20 @@ export function TitleBar({
       <div className="flex-1" />
 
       <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <button
+          type="button"
+          title={updateReady ? 'Update ready — restart to install' : updateBusy ? 'Checking for updates…' : 'Check for updates'}
+          onClick={onCheckForUpdates}
+          disabled={updateBusy}
+          className="relative flex h-8 w-11 items-center justify-center rounded-md text-sc64-muted transition-colors hover:bg-sc64-panel hover:text-sc64-text disabled:opacity-40"
+        >
+          <Download className="h-4 w-4" />
+          {updateReady ? (
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sc64-good" />
+          ) : updateBusy ? (
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 animate-pulse rounded-full bg-sc64-accent" />
+          ) : null}
+        </button>
         <button
           type="button"
           title="Minimize"

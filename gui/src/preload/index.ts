@@ -3,7 +3,7 @@
 // method is a thin ipcRenderer.invoke/send wrapper over the main-process IPC.
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuFile, MusicFile, RtcResult, SdEntry, UploadResult } from '../shared/types'
+import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuFile, MusicFile, RtcResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
 
 const api = {
   // Python-bridge passthrough (request/response).
@@ -28,6 +28,8 @@ const api = {
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
   reveal: (path: string): Promise<void> => ipcRenderer.invoke('app:reveal', path),
   downloadDeployer: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('sb:downloadDeployer'),
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('updates:check'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('updates:install'),
 
   // Frameless-window controls.
   windowMinimize: (): Promise<void> => ipcRenderer.invoke('win:minimize'),
@@ -55,6 +57,11 @@ const api = {
     const listener = (_e: IpcRendererEvent, message: string): void => cb(message)
     ipcRenderer.on('sb:downloadStatus', listener)
     return () => ipcRenderer.removeListener('sb:downloadStatus', listener)
+  },
+  onUpdate: (cb: (state: UpdateState) => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, state: UpdateState): void => cb(state)
+    ipcRenderer.on('sb:update', listener)
+    return () => ipcRenderer.removeListener('sb:update', listener)
   }
 }
 
