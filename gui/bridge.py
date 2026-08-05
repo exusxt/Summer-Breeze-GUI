@@ -53,6 +53,18 @@ _ROM_DIR_OVERRIDE = os.environ.get("SUMMER_BREEZE_ROMS_DIR")
 if _ROM_DIR_OVERRIDE:
     summerbreeze.LOCAL_ROMS_DIR = Path(_ROM_DIR_OVERRIDE)
 
+# And for the menu firmware / background-music folders: the CLI defaults to
+# SCRIPT_DIR/menu_versions and SCRIPT_DIR/menu_music, which are read-only (or
+# re-extracted) in packaged builds. Point both at persistent userData folders so
+# listing, backing up from the cart and uploading all work under Program Files.
+_MENU_VERSIONS_OVERRIDE = os.environ.get("SUMMER_BREEZE_MENU_VERSIONS_DIR")
+if _MENU_VERSIONS_OVERRIDE:
+    summerbreeze.MENU_VERSIONS_DIR = Path(_MENU_VERSIONS_OVERRIDE)
+
+_MENU_MUSIC_OVERRIDE = os.environ.get("SUMMER_BREEZE_MENU_MUSIC_DIR")
+if _MENU_MUSIC_OVERRIDE:
+    summerbreeze.MENU_MUSIC_DIR = Path(_MENU_MUSIC_OVERRIDE)
+
 REAL_STDOUT = sys.stdout
 
 

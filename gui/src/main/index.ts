@@ -47,13 +47,24 @@ function romsDir(): string {
   return join(repoRoot(), 'roms')
 }
 
-/** On the first packaged launch, copy any ROMs shipped in resources into the
- * persistent roms folder so the bridge (pointed at it via the env override)
- * still sees them across restarts. */
-async function seedRoms(): Promise<void> {
-  if (!app.isPackaged) return
-  const dest = romsDir()
-  const src = join(repoRoot(), 'roms')
+/** Where menu firmware files live. Packaged builds use a persistent userData
+ * folder for the same reasons as romsDir (Program Files is read-only and
+ * portable builds re-extract their resources on every launch). */
+function menuVersionsDir(): string {
+  if (app.isPackaged) return join(app.getPath('userData'), 'menu_versions')
+  return join(repoRoot(), 'menu_versions')
+}
+
+/** Where the menu background-music MP3s live; see menuVersionsDir. */
+function menuMusicDir(): string {
+  if (app.isPackaged) return join(app.getPath('userData'), 'menu_music')
+  return join(repoRoot(), 'menu_music')
+}
+
+/** On the first packaged launch, copy any files shipped in resources into the
+ * persistent folder so the bridge (pointed at it via the env override) still
+ * sees them across restarts. */
+async function seedDir(dest: string, src: string): Promise<void> {
   if (!existsSync(src)) return
   try {
     await mkdir(dest, { recursive: true })
@@ -71,6 +82,13 @@ async function seedRoms(): Promise<void> {
   } catch {
     // best-effort seed
   }
+}
+
+/** First-run copy of the shipped menu/music folders into userData. */
+async function seedMenuDirs(): Promise<void> {
+  if (!app.isPackaged) return
+  await seedDir(menuVersionsDir(), join(repoRoot(), 'menu_versions'))
+  await seedDir(menuMusicDir(), join(repoRoot(), 'menu_music'))
 }
 
 /** Copies the persistent deployer next to summerbreeze.py if one exists. */
@@ -101,7 +119,11 @@ async function startBridge(): Promise<void> {
   const bridgePath = join(root, 'gui', 'bridge.py')
   const env = { ...process.env } as NodeJS.ProcessEnv
   if (existsSync(deployerStorePath())) env['SUMMER_BREEZE_DEPLOYER'] = deployerStorePath()
-  if (app.isPackaged) env['SUMMER_BREEZE_ROMS_DIR'] = romsDir()
+  if (app.isPackaged) {
+    env['SUMMER_BREEZE_ROMS_DIR'] = romsDir()
+    env['SUMMER_BREEZE_MENU_VERSIONS_DIR'] = menuVersionsDir()
+    env['SUMMER_BREEZE_MENU_MUSIC_DIR'] = menuMusicDir()
+  }
   bridge?.dispose()
   bridge = new PythonBridge(python, [bridgePath, `--gui-version=${app.getVersion()}`], root, env)
   bridge.start()
@@ -348,7 +370,8 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   registerIpc()
   await seedDeployer()
-  await seedRoms()
+  await seedDir(romsDir(), join(repoRoot(), 'roms'))
+  await seedMenuDirs()
   await startBridge()
   createWindow()
   if (mainWindow) {

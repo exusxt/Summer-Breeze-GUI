@@ -93,7 +93,7 @@ export function MenuUpdateScreen(): React.JSX.Element {
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-sc64-muted">
           <ShieldAlert className="h-3.5 w-3.5" /> This will backup the current menu, then upload the selected one
         </div>
-        <p className="text-sm text-sc64-muted">Menu files (.z64/.n64/.v64) live in the menu_versions/ folder next to summerbreeze.py.</p>
+        <p className="text-sm text-sc64-muted">Menu files (.z64/.n64/.v64) live in the app's menu_versions/ folder.</p>
       </Panel>
 
       {menus === null ? (
