@@ -169,5 +169,6 @@ builds and publishes Windows, macOS and Linux artifacts to a GitHub release.
 
 ## Credits
 
+- [Summer Breeze](https://github.com/TheLeggett/Summer-Breeze) by TheLeggett — the original CLI this GUI builds on
 - [SummerCart64](https://github.com/Polprzewodnikowy/SummerCart64) by Polprzewodnikowy
 - [N64FlashcartMenu](https://github.com/Polprzewodnikowy/N64FlashcartMenu) (sc64menu.n64)
