@@ -116,7 +116,7 @@ def stream_deployer(args, label):
             else:
                 idx = min(cr, lf)
             line = buf[:idx]
-            buf = buf[idx + 1:]
+            buf = buf[idx + 1 :]
             try:
                 text = line.decode("utf-8", "replace").strip()
             except Exception:  # noqa: BLE001
@@ -228,10 +228,7 @@ def cmd_upload(params):
 
 
 def cmd_menu_list(_params):
-    return [
-        {"name": f.name, "path": str(f), "size": f.stat().st_size}
-        for f in summerbreeze.list_local_menu_versions()
-    ]
+    return [{"name": f.name, "path": str(f), "size": f.stat().st_size} for f in summerbreeze.list_local_menu_versions()]
 
 
 def cmd_menu_backup(_params):
@@ -250,10 +247,7 @@ def cmd_music_status(_params):
 
 
 def cmd_music_list(_params):
-    return [
-        {"name": f.name, "path": str(f), "size": f.stat().st_size}
-        for f in summerbreeze.list_local_music()
-    ]
+    return [{"name": f.name, "path": str(f), "size": f.stat().st_size} for f in summerbreeze.list_local_music()]
 
 
 def cmd_music_upload(params):
