@@ -8,6 +8,8 @@ A cross-platform desktop GUI for managing ROMs on your SummerCart64 flash cart,
 built on Electron with the Summer Breeze Python CLI doing the actual cart work
 through a bridge process.
 
+Latest release: **[v0.5.1](https://github.com/exusxt/Summer-Breeze-GUI/releases/tag/v0.5.1)**.
+
 ![Summer Breeze GUI](screenshot.png)
 
 ## Features
@@ -15,9 +17,20 @@ through a bridge process.
 - **Ten built-in screens**: Status, Local ROMs, Cart Contents, Compare, Upload,
   Quick Upload, SC64 Menu update, Background Music, RTC Clock sync and an
   SD card browser
-- **Themes**: 14 themes including a gallery glass family with photo backgrounds
-- **In-app deployer setup**: downloads the official `sc64deployer` for you if it
-  is missing
+- **Add & verify ROMs**: the Local ROMs screen imports `.z64`, `.n64` or `.v64`
+  files from a file picker, validates each one against its N64 header (magic
+  word, byte order, title, game code and region), rejects files that are not
+  N64 ROMs and skips duplicates by game identity — with the title, game code,
+  byte order and region shown on every entry
+- **SC64 menu downloads**: the Update SC64 Menu screen fetches the latest
+  `sc64menu.n64` straight from GitHub — either the official N64FlashcartMenu
+  release or TheLeggett's custom build (which adds background-music support) —
+  validates it and drops it into the app's menu_versions folder, ready for the
+  existing backup-and-upload flow
+- **Themes**: 14 themes including the Gallery Glass family with 9 photo
+  backgrounds
+- **Easy setup**: detects a Python 3.10+ interpreter (one-click install when
+  missing) and downloads the official `sc64deployer` for you if it is missing
 - **Auto-update**: checks for new versions on launch and via a title-bar button,
   downloads updates in the background and lets you install when ready
 
@@ -27,8 +40,8 @@ Get the latest build from the [Releases page](https://github.com/exusxt/Summer-B
 
 | Platform | Artifacts |
 | --- | --- |
-| Windows | `Summer-Breeze-GUI-Setup-x.y.z.exe` (NSIS installer) and `Summer-Breeze-GUI-x.y.z.exe` (portable, no install) |
-| macOS | `Summer-Breeze-GUI-x.y.z.dmg` / `.zip` (Intel + Apple Silicon) |
+| Windows | `Summer-Breeze-GUI-Setup-0.5.1.exe` (NSIS installer) and `Summer-Breeze-GUI-0.5.1.exe` (portable, no install) |
+| macOS | `Summer-Breeze-GUI-0.5.1.dmg` / `.zip` (Intel + Apple Silicon) |
 | Linux | `.AppImage`, `.deb`, `.rpm` and `.pacman` (x64 + arm64) |
 
 Auto-update behavior:
@@ -43,7 +56,8 @@ right-click → Open the first time.
 
 ## Requirements
 
-- Python 3.10+ (the GUI runs the Python bridge; the CLI needs it directly)
+- Python 3.10+ (the GUI runs the Python bridge; the CLI needs it directly) — if
+  it is missing or too old, the app offers a one-click install on first launch
 - SummerCart64 connected via USB
 - `sc64deployer` binary (the GUI offers to download it; see setup below)
 - The SC64's SD card is only reachable while your **N64 is powered ON**
