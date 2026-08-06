@@ -8,8 +8,6 @@ A cross-platform desktop GUI for managing ROMs on your SummerCart64 flash cart,
 built on Electron with the Summer Breeze Python CLI doing the actual cart work
 through a bridge process.
 
-Latest release: **[v0.5.1](https://github.com/exusxt/Summer-Breeze-GUI/releases/tag/v0.5.1)**.
-
 ![Summer Breeze GUI](screenshot.png)
 
 ## Features
@@ -65,15 +63,23 @@ right-click → Open the first time.
 ## Setup
 
 Install the app from the [Releases page](https://github.com/exusxt/Summer-Breeze-GUI/releases)
-for your platform, then start it. The first screen will warn you if the
-`sc64deployer` binary is missing:
+for your platform and start it. On first launch the app walks you through its
+two runtime dependencies, each with a one-click option:
 
-- Click **Download sc64deployer** to fetch it automatically (stored persistently
-  under `%APPDATA%\Summer Breeze\deployer`), or
-- Download it manually from the
+- **Python 3.10+** — the GUI drives the official Summer Breeze CLI through a
+  Python bridge, so a compatible interpreter is required. If Python is missing
+  or too old, a prompt offers to install it for you (silent winget/installer on
+  Windows, the python.org wizard on macOS, package-manager guidance on Linux).
+- **sc64deployer** — the official tool from the SummerCart64 project that talks
+  to the cart. If it is not found, a prompt offers to download it automatically
+  (stored persistently under `%APPDATA%\Summer Breeze\deployer`). Alternatively
+  download it manually from the
   [SummerCart64 releases](https://github.com/Polprzewodnikowy/SummerCart64/releases)
-  and place it next to `summerbreeze.py` (`sc64deployer.exe` on Windows,
-  `sc64deployer` on macOS/Linux — make it executable on the latter two).
+  and place `sc64deployer.exe` (Windows) or `sc64deployer` (macOS/Linux — make
+  it executable) next to `summerbreeze.py`.
+
+Then connect your SummerCart64 over USB. The SD card is only reachable while
+your **N64 is powered ON**.
 
 ## Directory Structure
 
