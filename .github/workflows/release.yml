@@ -74,7 +74,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder ${{ matrix.args }} --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        shell: bash
+        run: |
+          PUBLISH_FLAG=${{ startsWith(github.ref, 'refs/tags/v') && '--publish always' || '--publish never' }}
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # Universal installer plus arch-specific portables: a single
+            # electron-builder run would also emit a merged 230 MB portable, so
+            # build each artifact in its own run instead.
+            npx electron-builder --win nsis --x64 --arm64 $PUBLISH_FLAG
+            npx electron-builder --win portable --x64 $PUBLISH_FLAG
+            npx electron-builder --win portable --arm64 $PUBLISH_FLAG
+          else
+            npx electron-builder ${{ matrix.args }} $PUBLISH_FLAG
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v6

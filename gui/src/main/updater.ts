@@ -51,10 +51,13 @@ function isNewerVersion(latest: string, current: string): boolean {
   return false
 }
 
-// Tries the exact CI-published name first, then the space-separated local
-// build name, then any non-setup .exe as a last resort for older layouts.
+// Tries the arch-specific CI-published name first, then the legacy universal /
+// space-separated local build names, then any non-setup .exe as a last resort
+// for older layouts.
 function pickPortableAsset(assets: ReleaseAsset[], version: string): ReleaseAsset | undefined {
+  const archSuffix = process.arch === 'arm64' ? 'arm64' : 'x64'
   return (
+    assets.find((a) => a.name === `Summer-Breeze-GUI-${version}-${archSuffix}.exe`) ??
     assets.find((a) => a.name === `Summer-Breeze-GUI-${version}.exe`) ??
     assets.find((a) => a.name === `Summer Breeze GUI ${version}.exe`) ??
     assets.find((a) => /\.exe$/i.test(a.name) && !/setup/i.test(a.name))

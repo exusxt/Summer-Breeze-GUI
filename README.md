@@ -50,7 +50,7 @@ Get the latest build from the [Releases page](https://github.com/exusxt/Summer-B
 
 | Platform | Artifacts |
 | --- | --- |
-| Windows | `Summer-Breeze-GUI-Setup-0.5.2.exe` (NSIS installer) and `Summer-Breeze-GUI-0.5.2.exe` (portable, no install) — both universal x64 + arm64 |
+| Windows | `Summer-Breeze-GUI-Setup-0.5.3.exe` (NSIS installer, universal x64 + arm64), `Summer-Breeze-GUI-0.5.3-x64.exe` (portable) and `Summer-Breeze-GUI-0.5.3-arm64.exe` (portable) |
 | macOS | `Summer-Breeze-GUI-0.5.1.dmg` / `.zip` (Intel + Apple Silicon) |
 | Linux | `.AppImage`, `.deb`, `.rpm` and `.pacman` (x64 + arm64) |
 
@@ -59,7 +59,7 @@ Auto-update behavior:
 - **Installed builds** (Windows NSIS, macOS, Linux packages) update through
   `electron-updater` against the same GitHub release.
 - **Windows portable** builds self-update by downloading the newer portable exe
-  and swapping it in on restart.
+  for their architecture and swapping it in on restart.
 
 The builds are unsigned: Windows shows a SmartScreen warning and macOS requires
 right-click → Open the first time.

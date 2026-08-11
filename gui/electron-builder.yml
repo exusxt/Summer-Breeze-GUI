@@ -33,7 +33,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   artifactName: Summer-Breeze-GUI-Setup-${version}.${ext}
 portable:
-  artifactName: Summer-Breeze-GUI-${version}.${ext}
+  artifactName: Summer-Breeze-GUI-${version}-${arch}.${ext}
 mac:
   icon: build/icon.png
   target:
