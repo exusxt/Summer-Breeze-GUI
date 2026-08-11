@@ -5,6 +5,15 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.3] - 2026-08-11
+
+### Changed
+
+- Windows portable builds are now published as separate executables per architecture — `Summer-Breeze-GUI-<version>-x64.exe` and `Summer-Breeze-GUI-<version>-arm64.exe` (each about half the size of the previous merged portable); the NSIS installer stays a single universal x64 + arm64 file
+- The portable auto-updater now downloads the build matching the running architecture
+
+[Compare v0.5.2...v0.5.3](https://github.com/exusxt/Summer-Breeze-GUI/compare/v0.5.2...v0.5.3)
+
 ## [v0.5.2] - 2026-08-11
 
 ### Added
