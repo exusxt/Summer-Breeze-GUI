@@ -5,6 +5,27 @@ All notable changes to Summer Breeze GUI.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.2] - 2026-08-11
+
+### Added
+
+- Deploy to Cart screen: flash any local ROM into the cart with an optional save file and save-type override; with "Back up first" (on by default) the cart's current save is dumped to `saves/auto/` before flashing, so the previous game's progress is never lost
+- Save Manager screen: dump the cart's save (EEPROM/SRAM/FlashRAM) to disk with per-game history, copy any backup to the SD card's `/saves` save-filer folder or pull a save back from it, and restore a backup by sending it to the Deploy screen
+- Console screen: live bridge log with a persisted history across restarts, plus copy, export and "open logs folder" actions
+- The Status screen now shows the full `sc64deployer info` dump: firmware, RTC, save type, CIC seed, TV type, ROM write/shadow/extended, 64DD and SD card status
+- Windows installer and portable builds are now universal x64 + arm64 (single artifact, no install arch selection needed)
+
+### Fixed
+
+- Streamed bridge events (deploy/upload progress and log lines) now reach the UI: the event `type` was being dropped when forwarded, so progress bars and operation consoles were silent
+- The Console screen's live output now works for all operations, not just uploads
+
+### Changed
+
+- The Deploy to Cart screen replaces the previous two-step Upload flow for the common "flash a ROM now" case; Upload/Compare still handle explicit save transfer
+
+[Compare v0.5.1...v0.5.2](https://github.com/exusxt/Summer-Breeze-GUI/compare/v0.5.1...v0.5.2)
+
 ## [v0.5.1] - 2026-08-06
 
 ### Changed
