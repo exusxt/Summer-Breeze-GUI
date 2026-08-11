@@ -1,6 +1,6 @@
 /**
  * Renderer entry component: the top-level app shell. Applies the active theme,
- * shows the gallery background for glass themes, and routes between the ten
+ * shows the gallery background for glass themes, and routes between the
  * feature screens behind the frameless title bar and sidebar.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -24,6 +24,9 @@ import { MenuUpdateScreen } from './screens/MenuUpdateScreen'
 import { MusicScreen } from './screens/MusicScreen'
 import { RtcScreen } from './screens/RtcScreen'
 import { SdBrowserScreen } from './screens/SdBrowserScreen'
+import { SaveManagerScreen } from './screens/SaveManagerScreen'
+import { DeployScreen } from './screens/DeployScreen'
+import { ConsoleScreen } from './screens/ConsoleScreen'
 
 const THEME_KEY = 'summer-breeze-theme'
 
@@ -37,6 +40,7 @@ export default function App(): React.JSX.Element {
   const [version, setVersion] = useState('')
   const [maximized, setMaximized] = useState(false)
   const [screen, setScreen] = useState<ScreenId>('status')
+  const [pendingSave, setPendingSave] = useState<string | null>(null)
   const [status, setStatus] = useState<DeviceStatus | null>(null)
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -182,8 +186,21 @@ export default function App(): React.JSX.Element {
         return <RtcScreen />
       case 'browse':
         return <SdBrowserScreen />
+      case 'save':
+        return (
+          <SaveManagerScreen
+            onRestore={(path) => {
+              setPendingSave(path)
+              setScreen('deploy')
+            }}
+          />
+        )
+      case 'deploy':
+        return <DeployScreen initialSavePath={pendingSave} />
+      case 'console':
+        return <ConsoleScreen />
     }
-  }, [screen])
+  }, [screen, pendingSave])
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden">

@@ -67,12 +67,32 @@ export interface RomsAddResult {
   errors: string[]
 }
 
+/** Extra fields parsed from `sc64deployer info` (absent when no cart is
+ * connected). Keys map 1:1 to the CLI's output lines. */
+export interface CartInfo {
+  rtcDateTime: string | null
+  saveType: string | null
+  cicSeed: string | null
+  tvType: string | null
+  bootloaderSwitch: string | null
+  romWrite: string | null
+  romShadow: string | null
+  romExtended: string | null
+  ddMode: string | null
+  ddSdMode: string | null
+  ddDriveType: string | null
+  ddDiskState: string | null
+  buttonMode: string | null
+  sdCardStatus: string | null
+}
+
 /** Combined device + SD card status, plus firmware info when available. */
 export interface DeviceStatus {
   device: 'connected' | 'not-connected'
   firmwareVersion: string | null
   bootMode: string | null
   sdAccessible: boolean
+  info: CartInfo | null
 }
 
 /** Result of comparing local ROMs against the cart. */
@@ -153,6 +173,39 @@ export interface MusicFile {
 /** Result of an RTC sync. */
 export interface RtcResult {
   ok: boolean
+  message: string
+}
+
+/** One cart-save backup stored under the app's saves/ folder. */
+export interface SaveBackup {
+  id: string
+  game: string
+  fileName: string
+  path: string
+  size: number
+  date: string
+  saveType: string | null
+  source: 'manual' | 'auto' | 'sd'
+}
+
+/** Outcome of a save dump/copy operation. */
+export interface SaveOpResult {
+  ok: boolean
+  message: string
+  path?: string
+}
+
+/** Outcome of a deploy-to-cart operation. */
+export interface DeployResult {
+  ok: boolean
+  message: string
+  backupPath?: string
+}
+
+/** One persisted bridge-log line (used by the Console screen history). */
+export interface LogEntry {
+  time: string | null
+  level: 'info' | 'warn' | 'error'
   message: string
 }
 

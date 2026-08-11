@@ -3,7 +3,7 @@
 // method is a thin ipcRenderer.invoke/send wrapper over the main-process IPC.
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AppConfig, BridgeEvent, CompareResult, DeviceStatus, DownloadProgress, LocalRom, MenuDownloadResult, MenuFile, MenuReleaseInfo, MenuSource, MusicFile, PythonStatus, RomsAddResult, RtcResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
+import type { AppConfig, BridgeEvent, CompareResult, DeployResult, DeviceStatus, DownloadProgress, LocalRom, LogEntry, MenuDownloadResult, MenuFile, MenuReleaseInfo, MenuSource, MusicFile, PythonStatus, RomsAddResult, RtcResult, SaveBackup, SaveOpResult, SdEntry, UpdateState, UploadResult } from '../shared/types'
 
 const api = {
   // Python-bridge passthrough (request/response).
@@ -23,6 +23,19 @@ const api = {
   musicRemove: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('sb:musicRemove'),
   syncRtc: (): Promise<RtcResult> => ipcRenderer.invoke('sb:syncRtc'),
   browse: (path?: string): Promise<SdEntry[]> => ipcRenderer.invoke('sb:browse', path ? { path } : {}),
+
+  // Save management + deploy.
+  saveList: (): Promise<SaveBackup[]> => ipcRenderer.invoke('sb:saveList'),
+  saveBackup: (game?: string): Promise<SaveOpResult> => ipcRenderer.invoke('sb:saveBackup', { game }),
+  saveToSd: (path: string): Promise<SaveOpResult> => ipcRenderer.invoke('sb:saveToSd', { path }),
+  saveFromSd: (sdPath: string): Promise<SaveOpResult> => ipcRenderer.invoke('sb:saveFromSd', { sdPath }),
+  deploy: (params: { romPath: string; savePath?: string | null; saveType?: string | null; backupFirst?: boolean }): Promise<DeployResult> =>
+    ipcRenderer.invoke('sb:deploy', params),
+
+  // Bridge log viewer.
+  logHistory: (): Promise<LogEntry[]> => ipcRenderer.invoke('sb:logHistory'),
+  exportLog: (): Promise<SaveOpResult> => ipcRenderer.invoke('app:exportLog'),
+  openLogsFolder: (): Promise<void> => ipcRenderer.invoke('app:openLogsFolder'),
 
   // SC64 menu downloads.
   menuReleases: (): Promise<MenuReleaseInfo[]> => ipcRenderer.invoke('menu:releases'),

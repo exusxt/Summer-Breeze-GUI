@@ -1,9 +1,9 @@
 /**
- * Left-hand navigation sidebar listing the ten Summer Breeze features. The
+ * Left-hand navigation sidebar listing the Summer Breeze features. The
  * active item is tinted with the accent color; each row uses the standard
  * panel/border styling so it matches the reference app's look.
  */
-import { Activity, Clock, Disc3, FolderTree, HardDrive, ListTree, Music, RefreshCcw, Upload, Zap } from 'lucide-react'
+import { Activity, Clock, Disc3, FolderTree, HardDrive, ListTree, Music, RefreshCcw, Rocket, Save, Terminal, Upload, Zap } from 'lucide-react'
 import { cn } from '../lib'
 
 export type ScreenId =
@@ -17,6 +17,9 @@ export type ScreenId =
   | 'music'
   | 'rtc'
   | 'browse'
+  | 'save'
+  | 'deploy'
+  | 'console'
 
 const ITEMS: Array<{ id: ScreenId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'status', label: 'Status', icon: Activity },
@@ -24,11 +27,14 @@ const ITEMS: Array<{ id: ScreenId; label: string; icon: React.ComponentType<{ cl
   { id: 'cart', label: 'Cart Contents', icon: ListTree },
   { id: 'compare', label: 'Compare', icon: RefreshCcw },
   { id: 'upload', label: 'Upload ROMs', icon: Upload },
+  { id: 'deploy', label: 'Deploy to Cart', icon: Rocket },
   { id: 'quick', label: 'Quick Upload', icon: Zap },
+  { id: 'save', label: 'Save Manager', icon: Save },
   { id: 'menu', label: 'Update SC64 Menu', icon: Disc3 },
   { id: 'music', label: 'Background Music', icon: Music },
   { id: 'rtc', label: 'Sync RTC Clock', icon: Clock },
-  { id: 'browse', label: 'Browse SD Card', icon: FolderTree }
+  { id: 'browse', label: 'Browse SD Card', icon: FolderTree },
+  { id: 'console', label: 'Console', icon: Terminal }
 ]
 
 export function Sidebar({

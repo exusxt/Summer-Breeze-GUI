@@ -152,6 +152,43 @@ def stream_deployer(args, label):
 
 
 # --- RPC methods -----------------------------------------------------------
+# Field names from `sc64deployer info`, mapped to the CamelCase keys the GUI
+# displays. Lines whose label is not listed here are ignored, so newer deployer
+# versions that add fields stay compatible.
+_STATUS_FIELDS = {
+    "Firmware version": "firmwareVersion",
+    "RTC datetime": "rtcDateTime",
+    "Boot mode": "bootMode",
+    "Save type": "saveType",
+    "CIC seed": "cicSeed",
+    "TV type": "tvType",
+    "Bootloader switch": "bootloaderSwitch",
+    "ROM write": "romWrite",
+    "ROM shadow": "romShadow",
+    "ROM extended": "romExtended",
+    "64DD mode": "ddMode",
+    "64DD SD card mode": "ddSdMode",
+    "64DD drive type": "ddDriveType",
+    "64DD disk state": "ddDiskState",
+    "Button mode": "buttonMode",
+    "SD card": "sdCardStatus",
+}
+
+
+def _parse_info(out: str) -> dict:
+    """Parse `sc64deployer info` lines into a dict of known, stripped fields."""
+    info = {}
+    for line in out.split("\n"):
+        stripped = line.strip()
+        if not stripped or ":" not in stripped:
+            continue
+        label, _, value = stripped.partition(":")
+        key = _STATUS_FIELDS.get(label.strip())
+        if key:
+            info[key] = value.strip()
+    return info
+
+
 def cmd_config(_params):
     deployer = Path(summerbreeze.SC64_DEPLOYER)
     return {
@@ -168,23 +205,19 @@ def cmd_config(_params):
 
 def cmd_status(_params):
     connected = summerbreeze.check_device_connected()
-    firmware = None
-    boot = None
+    info = {}
     sd = False
     if connected:
         code, out, _err = summerbreeze.run_sc64_command(["info"])
         if code == 0:
-            for line in out.split("\n"):
-                if "Firmware version" in line:
-                    firmware = line.strip()
-                if "Boot mode" in line:
-                    boot = line.strip()
+            info = _parse_info(out)
         sd = summerbreeze.is_sd_card_accessible()
     return {
         "device": "connected" if connected else "not-connected",
-        "firmwareVersion": firmware,
-        "bootMode": boot,
+        "firmwareVersion": info.get("firmwareVersion") or None,
+        "bootMode": info.get("bootMode") or None,
         "sdAccessible": sd,
+        "info": info or None,
     }
 
 
@@ -295,6 +328,44 @@ def cmd_browse(params):
     return summerbreeze.list_sd_card_files(path)
 
 
+def cmd_save_read(params):
+    """Dump the cart's current save data to a local file (`download save`)."""
+    path = Path(params["path"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    code, out, err = summerbreeze.run_sc64_command(["download", "save", str(path)])
+    if code == 0:
+        return {"ok": True, "message": f"Save dumped to {path.name}"}
+    return {"ok": False, "message": (err or out or "").strip() or "Failed to dump save."}
+
+
+def cmd_save_to_sd(params):
+    """Upload a local save file into the SD card's save-filer folder."""
+    local = Path(params["local_path"])
+    target = params.get("target") or f"/saves/{local.name}"
+    code = stream_deployer(["sd", "upload", str(local), target], local.name)
+    return {"ok": code == 0, "message": "Save copied to SD card." if code == 0 else "Failed to copy save to SD."}
+
+
+def cmd_save_from_sd(params):
+    """Download a save file from the SD card to a local path."""
+    sd_path = params["sd_path"]
+    local = Path(params["local_path"])
+    local.parent.mkdir(parents=True, exist_ok=True)
+    code = stream_deployer(["sd", "download", sd_path, str(local)], local.name)
+    return {"ok": code == 0, "message": f"Save downloaded to {local.name}." if code == 0 else "Failed to download save."}
+
+
+def cmd_deploy(params):
+    """Deploy a ROM to the cart, optionally writing a save file with it."""
+    args = ["upload", str(Path(params["rom_path"]))]
+    if params.get("save_path"):
+        args += ["-s", str(params["save_path"])]
+    if params.get("save_type"):
+        args += ["-t", params["save_type"]]
+    code = stream_deployer(args, Path(params["rom_path"]).name)
+    return {"ok": code == 0, "message": "Deploy complete!" if code == 0 else "Deploy failed."}
+
+
 DISPATCH = {
     "config": cmd_config,
     "status": cmd_status,
@@ -312,6 +383,10 @@ DISPATCH = {
     "music_remove": cmd_music_remove,
     "sync_rtc": cmd_sync_rtc,
     "browse": cmd_browse,
+    "save_read": cmd_save_read,
+    "save_to_sd": cmd_save_to_sd,
+    "save_from_sd": cmd_save_from_sd,
+    "deploy": cmd_deploy,
 }
 
 

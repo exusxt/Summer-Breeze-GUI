@@ -2,12 +2,12 @@
 // the IPC surface that forwards renderer calls to the Python bridge.
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import { existsSync } from 'node:fs'
-import { copyFile, mkdir, readdir, stat } from 'node:fs/promises'
+import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs'
+import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 import { PythonBridge } from './bridge'
 import { downloadDeployer } from './download'
-import { DEPLOYER_EXE, type LocalRom, type MenuDownloadResult, type MenuReleaseInfo, type MenuSource, type RomHeaderInfo, type RomIssue, type RomsAddResult } from '../shared/types'
+import { DEPLOYER_EXE, type DeployResult, type DeviceStatus, type LocalRom, type LogEntry, type MenuDownloadResult, type MenuReleaseInfo, type MenuSource, type RomHeaderInfo, type RomIssue, type RomsAddResult, type SaveBackup, type SaveOpResult } from '../shared/types'
 import { inspectN64File, isN64Ext, romIdentity } from './n64validate'
 import { downloadMenu, MENU_SOURCES, menuReleaseInfo } from './menuDownload'
 import { initUpdater, checkForUpdates, installUpdate } from './updater'
@@ -69,6 +69,73 @@ function menuVersionsDir(): string {
 function menuMusicDir(): string {
   if (app.isPackaged) return join(app.getPath('userData'), 'menu_music')
   return join(repoRoot(), 'menu_music')
+}
+
+/** Where cart-save backups live: userData\saves\<game>\<timestamp>.<ext>. */
+function saveDir(): string {
+  return join(app.getPath('userData'), 'saves')
+}
+
+function saveManifestPath(): string {
+  return join(saveDir(), 'saves.json')
+}
+
+async function loadSaveManifest(): Promise<SaveBackup[]> {
+  try {
+    return JSON.parse(await readFile(saveManifestPath(), 'utf-8')) as SaveBackup[]
+  } catch {
+    return []
+  }
+}
+
+async function persistSaveManifest(list: SaveBackup[]): Promise<void> {
+  await mkdir(saveDir(), { recursive: true })
+  await writeFile(saveManifestPath(), JSON.stringify(list, null, 2), 'utf-8')
+}
+
+async function appendSaveBackup(entry: SaveBackup): Promise<void> {
+  const list = await loadSaveManifest()
+  list.push(entry)
+  await persistSaveManifest(list)
+}
+
+async function statSizeSafe(path: string): Promise<number> {
+  try {
+    return (await stat(path)).size
+  } catch {
+    return 0
+  }
+}
+
+/** Save-file extension the SC64 menu's save filer expects per save type. */
+function saveExtension(saveType: string | null | undefined): string {
+  const t = (saveType ?? '').toLowerCase()
+  if (t.includes('flash')) return '.fla'
+  if (t.includes('sram')) return '.sra'
+  if (t.includes('eeprom')) return '.eep'
+  return '.sav'
+}
+
+/** Folder- and filename-safe version of a game name. */
+function safeName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'unknown'
+}
+
+/** Rolling bridge log: userData\logs\bridge.log. */
+function logFile(): string {
+  return join(app.getPath('userData'), 'logs', 'bridge.log')
+}
+
+let logStream: WriteStream | null = null
+
+function ensureLogStream(): void {
+  if (logStream) return
+  const dir = join(app.getPath('userData'), 'logs')
+  mkdirSync(dir, { recursive: true })
+  logStream = createWriteStream(logFile(), { flags: 'a' })
+  logStream.on('error', () => {
+    // Logging is best-effort; never let a full disk take the app down.
+  })
 }
 
 /** On the first packaged launch, copy any files shipped in resources into the
@@ -139,6 +206,10 @@ async function startBridge(): Promise<void> {
   bridge.start()
   bridge.on('event', (ev) => {
     mainWindow?.webContents.send('sb:event', ev)
+    if (ev.type === 'log') {
+      ensureLogStream()
+      logStream?.write(`[${new Date().toISOString()}] ${ev.level}: ${ev.message}\n`)
+    }
   })
   bridge.on('exit', () => {
     console.error('[bridge] Python bridge exited')
@@ -359,6 +430,166 @@ function registerIpc(): void {
       send('menu:downloadStatus', err instanceof Error ? err.message : String(err))
       return { ok: false, message: err instanceof Error ? err.message : String(err) }
     }
+  })
+
+  // Save management. Backups are stored as userData\saves\<game>\ files with a
+  // JSON manifest, so per-game history survives restarts; the cart I/O itself
+  // (download save, SD copy) runs through the bridge.
+  ipcMain.handle('sb:saveList', async (): Promise<SaveBackup[]> => {
+    const list = await loadSaveManifest()
+    return list.sort((a, b) => b.date.localeCompare(a.date))
+  })
+
+  // Dumps the cart's current save to saves/<game>/<timestamp>.<ext>. The save
+  // type (for the extension) is read from `sc64deployer info` when available.
+  ipcMain.handle('sb:saveBackup', async (_e, params: { game?: string }): Promise<SaveOpResult> => {
+    if (!bridge) throw new Error('Python bridge is not running')
+    const game = safeName(params?.game ?? '')
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    let saveType: string | null = null
+    try {
+      const st = (await bridge.request('status', {})) as DeviceStatus
+      saveType = st.info?.saveType ?? null
+    } catch {
+      // Best effort; the extension defaults to .sav.
+    }
+    const fileName = `${stamp}${saveExtension(saveType)}`
+    const path = join(saveDir(), game, fileName)
+    const res = (await bridge.request('save_read', { path })) as SaveOpResult
+    if (!res.ok) return res
+    await appendSaveBackup({
+      id: stamp,
+      game,
+      fileName,
+      path,
+      size: await statSizeSafe(path),
+      date: new Date().toISOString(),
+      saveType,
+      source: 'manual'
+    })
+    return { ok: true, message: `Backed up the cart save as ${game}/${fileName}`, path }
+  })
+
+  // Copies a local backup into /saves on the SD card (where the menu's save
+  // filer can read it from the console).
+  ipcMain.handle('sb:saveToSd', async (_e, params: { path: string }): Promise<SaveOpResult> => {
+    if (!bridge) throw new Error('Python bridge is not running')
+    if (!params?.path) return { ok: false, message: 'No save file selected.' }
+    return bridge.request('save_to_sd', { local_path: params.path, target: `/saves/${basename(params.path)}` })
+  })
+
+  // Pulls a save file off the SD card into the local saves/ folder.
+  ipcMain.handle('sb:saveFromSd', async (_e, params: { sdPath: string }): Promise<SaveOpResult> => {
+    if (!bridge) throw new Error('Python bridge is not running')
+    if (!params?.sdPath) return { ok: false, message: 'No SD save selected.' }
+    const name = basename(params.sdPath)
+    const game = safeName(name.replace(/\.[^.]+$/, ''))
+    const path = join(saveDir(), game, name)
+    const res = (await bridge.request('save_from_sd', { sd_path: params.sdPath, local_path: path })) as SaveOpResult
+    if (!res.ok) return res
+    await appendSaveBackup({
+      id: `${Date.now()}`,
+      game,
+      fileName: name,
+      path,
+      size: await statSizeSafe(path),
+      date: new Date().toISOString(),
+      saveType: null,
+      source: 'sd'
+    })
+    return { ok: true, message: `Downloaded ${name} from the SD card`, path }
+  })
+
+  // Deploy a ROM to the cart. With backupFirst set, the cart's current save is
+  // dumped to saves/auto/ first, so a deploy never silently discards the
+  // previous game's progress (the entry shows up in the Save Manager as an
+  // "auto" backup that can be restored via a later deploy).
+  ipcMain.handle(
+    'sb:deploy',
+    async (_e, params: { romPath: string; savePath?: string | null; saveType?: string | null; backupFirst?: boolean }): Promise<DeployResult> => {
+      if (!bridge) throw new Error('Python bridge is not running')
+      if (!params?.romPath) return { ok: false, message: 'No ROM selected.' }
+      let backupPath: string | undefined
+      if (params.backupFirst) {
+        let saveType = params.saveType ?? null
+        if (!saveType) {
+          try {
+            const st = (await bridge.request('status', {})) as DeviceStatus
+            saveType = st.info?.saveType ?? null
+          } catch {
+            // best effort
+          }
+        }
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const fileName = `deploy-backup-${stamp}${saveExtension(saveType)}`
+        const path = join(saveDir(), 'auto', fileName)
+        const res = (await bridge.request('save_read', { path })) as SaveOpResult
+        if (!res.ok) return { ok: false, message: `Save backup failed: ${res.message}` }
+        backupPath = path
+        await appendSaveBackup({
+          id: stamp,
+          game: 'auto',
+          fileName,
+          path,
+          size: await statSizeSafe(path),
+          date: new Date().toISOString(),
+          saveType,
+          source: 'auto'
+        })
+      }
+      const res = (await bridge.request('deploy', {
+        rom_path: params.romPath,
+        save_path: params.savePath ?? null,
+        save_type: params.saveType ?? null
+      })) as SaveOpResult
+      if (!res.ok) return { ok: false, message: res.message }
+      return {
+        ok: true,
+        message: backupPath ? `Backed up the previous save, then ${res.message}` : res.message,
+        backupPath
+      }
+    }
+  )
+
+  // Bridge log viewer: persisted history, export and folder reveal.
+  ipcMain.handle('sb:logHistory', async (): Promise<LogEntry[]> => {
+    const file = logFile()
+    if (!existsSync(file)) return []
+    try {
+      const content = await readFile(file, 'utf-8')
+      return content
+        .trimEnd()
+        .split('\n')
+        .slice(-500)
+        .map((line): LogEntry => {
+          const m = line.match(/^\[(.*?)\] (info|warn|error): (.*)$/)
+          return m
+            ? { time: m[1], level: m[2] as LogEntry['level'], message: m[3] }
+            : { time: null, level: 'info', message: line }
+        })
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle('app:exportLog', async (): Promise<SaveOpResult> => {
+    const file = logFile()
+    if (!existsSync(file)) return { ok: false, message: 'No log file written yet.' }
+    const opts: Electron.SaveDialogOptions = {
+      title: 'Export bridge log',
+      defaultPath: `summer-breeze-bridge-${new Date().toISOString().replace(/[:.]/g, '-')}.log`,
+      filters: [{ name: 'Log files', extensions: ['log', 'txt'] }]
+    }
+    const result = mainWindow ? await dialog.showSaveDialog(mainWindow, opts) : await dialog.showSaveDialog(opts)
+    if (result.canceled || !result.filePath) return { ok: false, message: 'Export cancelled.' }
+    await copyFile(file, result.filePath)
+    return { ok: true, message: result.filePath }
+  })
+
+  ipcMain.handle('app:openLogsFolder', async (): Promise<void> => {
+    const dir = join(app.getPath('userData'), 'logs')
+    await mkdir(dir, { recursive: true })
+    void shell.openPath(dir)
   })
 
   // Frameless-window controls.

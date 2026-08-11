@@ -45,7 +45,13 @@ export class PythonBridge extends EventEmitter {
       }
       const frame = obj as { event?: string; id?: number; result?: unknown; error?: string; data?: unknown }
       if (frame.event) {
-        this.emit('event', frame.data as BridgeEvent)
+        // Rebuild the typed BridgeEvent: progress events carry their payload in
+        // `data`, log events are flattened (level/message sit on the event).
+        if (frame.event === 'log') {
+          this.emit('event', { type: 'log', ...(frame.data as object) } as BridgeEvent)
+        } else {
+          this.emit('event', { type: frame.event, data: frame.data } as BridgeEvent)
+        }
         return
       }
       if (typeof frame.id === 'number') {

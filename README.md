@@ -12,9 +12,16 @@ through a bridge process.
 
 ## Features
 
-- **Ten built-in screens**: Status, Local ROMs, Cart Contents, Compare, Upload,
-  Quick Upload, SC64 Menu update, Background Music, RTC Clock sync and an
-  SD card browser
+- **Thirteen built-in screens**: Status, Local ROMs, Cart Contents, Compare,
+  Upload, Deploy to Cart, Quick Upload, Save Manager, SC64 Menu update,
+  Background Music, RTC Clock sync, an SD card browser and a Console
+- **Deploy to Cart**: flash any local ROM straight into the cart, optionally
+  carrying a save file and save-type override; with "Back up first" enabled the
+  cart's current save is dumped to disk before flashing so the previous game's
+  progress is never lost (the backup is restorable from the Save Manager)
+- **Save Manager**: back up the cart's save (EEPROM / SRAM / FlashRAM) to disk
+  with per-game history, copy backups to the SD card's `/saves` save-filer
+  folder or pull them back, and restore any backup by deploying it with a ROM
 - **Add & verify ROMs**: the Local ROMs screen imports `.z64`, `.n64` or `.v64`
   files from a file picker, validates each one against its N64 header (magic
   word, byte order, title, game code and region), rejects files that are not
@@ -25,6 +32,11 @@ through a bridge process.
   release or TheLeggett's custom build (which adds background-music support) —
   validates it and drops it into the app's menu_versions folder, ready for the
   existing backup-and-upload flow
+- **Cart info panel**: the Status screen shows the full `sc64deployer info`
+  dump — firmware, RTC, save type, CIC seed, TV type, ROM configuration, 64DD
+  state and SD card status
+- **Console**: a live, persisted log of the bridge's sc64deployer output with
+  copy/export, so "why did that deploy fail" is always answerable
 - **Themes**: 14 themes including the Gallery Glass family with 9 photo
   backgrounds
 - **Easy setup**: detects a Python 3.10+ interpreter (one-click install when
@@ -38,7 +50,7 @@ Get the latest build from the [Releases page](https://github.com/exusxt/Summer-B
 
 | Platform | Artifacts |
 | --- | --- |
-| Windows | `Summer-Breeze-GUI-Setup-0.5.1.exe` (NSIS installer) and `Summer-Breeze-GUI-0.5.1.exe` (portable, no install) |
+| Windows | `Summer-Breeze-GUI-Setup-0.5.2.exe` (NSIS installer) and `Summer-Breeze-GUI-0.5.2.exe` (portable, no install) — both universal x64 + arm64 |
 | macOS | `Summer-Breeze-GUI-0.5.1.dmg` / `.zip` (Intel + Apple Silicon) |
 | Linux | `.AppImage`, `.deb`, `.rpm` and `.pacman` (x64 + arm64) |
 

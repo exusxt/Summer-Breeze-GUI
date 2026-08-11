@@ -1,12 +1,45 @@
 /**
  * Status screen: device connection, firmware info, SD card accessibility and a
- * one-click RTC sync, mirroring the CLI's "Show Status" command.
+ * one-click RTC sync, mirroring the CLI's "Show Status" command. When a cart is
+ * connected, the full `sc64deployer info` dump is shown in grouped cards.
  */
 import { useEffect, useState } from 'react'
-import { Activity, Clock, Cpu, RefreshCw, Usb } from 'lucide-react'
+import { Activity, Clock, Cpu, Disc3, RefreshCw, Settings2, Usb } from 'lucide-react'
 import type { DeviceStatus } from '../../../shared/types'
 import { Badge, Button, Panel, Spinner } from '../components/ui'
 import { cn } from '../lib'
+
+function InfoRow({ label, value }: { label: string; value: string | null }): React.JSX.Element {
+  return (
+    <li className="flex justify-between gap-4">
+      <span className="text-sc64-muted">{label}</span>
+      <span className="font-mono">{value || '—'}</span>
+    </li>
+  )
+}
+
+function InfoGroup({
+  title,
+  icon: Icon,
+  fields
+}: {
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  fields: Array<[string, string | null]>
+}): React.JSX.Element {
+  return (
+    <Panel>
+      <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-sc64-muted">
+        <Icon className="h-3.5 w-3.5" /> {title}
+      </div>
+      <ul className="space-y-1.5 text-sm text-sc64-text">
+        {fields.map(([label, value]) => (
+          <InfoRow key={label} label={label} value={value} />
+        ))}
+      </ul>
+    </Panel>
+  )
+}
 
 export function StatusScreen(): React.JSX.Element {
   const [status, setStatus] = useState<DeviceStatus | null>(null)
@@ -72,14 +105,9 @@ export function StatusScreen(): React.JSX.Element {
               </div>
               {status.device === 'connected' ? (
                 <ul className="space-y-1.5 text-sm text-sc64-text">
-                  <li className="flex justify-between gap-4">
-                    <span className="text-sc64-muted">Firmware</span>
-                    <span className="font-mono">{status.firmwareVersion ?? '—'}</span>
-                  </li>
-                  <li className="flex justify-between gap-4">
-                    <span className="text-sc64-muted">Boot mode</span>
-                    <span className="font-mono">{status.bootMode ?? '—'}</span>
-                  </li>
+                  <InfoRow label="Firmware" value={status.firmwareVersion} />
+                  <InfoRow label="Boot mode" value={status.bootMode} />
+                  <InfoRow label="RTC" value={status.info?.rtcDateTime ?? null} />
                 </ul>
               ) : (
                 <p className="text-sm text-sc64-muted">Make sure your SummerCart64 is plugged in via USB.</p>
@@ -93,6 +121,11 @@ export function StatusScreen(): React.JSX.Element {
                 </span>
                 {status.sdAccessible ? <Badge tone="good">Accessible</Badge> : <Badge tone="warn">Not accessible</Badge>}
               </div>
+              {status.info?.sdCardStatus ? (
+                <ul className="mb-3 space-y-1.5 text-sm text-sc64-text">
+                  <InfoRow label="Status" value={status.info.sdCardStatus} />
+                </ul>
+              ) : null}
               {!status.sdAccessible ? (
                 <p className="text-sm text-sc64-muted">
                   SD card access requires the N64 to be <span className="text-sc64-text">powered ON</span>. Turn the console on and try again.
@@ -102,6 +135,35 @@ export function StatusScreen(): React.JSX.Element {
               )}
             </Panel>
           </div>
+
+          {status.info ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <InfoGroup
+                title="Save & ROM"
+                icon={Settings2}
+                fields={[
+                  ['Save type', status.info.saveType],
+                  ['CIC seed', status.info.cicSeed],
+                  ['TV type', status.info.tvType],
+                  ['Bootloader switch', status.info.bootloaderSwitch],
+                  ['ROM write', status.info.romWrite],
+                  ['ROM shadow', status.info.romShadow],
+                  ['ROM extended', status.info.romExtended]
+                ]}
+              />
+              <InfoGroup
+                title="64DD"
+                icon={Disc3}
+                fields={[
+                  ['Mode', status.info.ddMode],
+                  ['SD card mode', status.info.ddSdMode],
+                  ['Drive type', status.info.ddDriveType],
+                  ['Disk state', status.info.ddDiskState],
+                  ['Button mode', status.info.buttonMode]
+                ]}
+              />
+            </div>
+          ) : null}
 
           <Panel className={cn('flex flex-wrap items-center justify-between gap-3')}>
             <div>
