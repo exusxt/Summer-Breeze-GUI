@@ -76,8 +76,8 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         shell: bash
         run: |
-          # GITHUB_REF_TYPE avoids embedding " --publish always" inside a
-          # ${{ }} expression, which would be tokenized as two words and
+          # GITHUB_REF_TYPE avoids embedding the publish flag inside a
+          # template expression, which would be tokenized as two words and
           # break the assignment.
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             PUBLISH_FLAG="--publish always"
