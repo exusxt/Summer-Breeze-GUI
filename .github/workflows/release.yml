@@ -76,7 +76,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         shell: bash
         run: |
-          PUBLISH_FLAG=${{ startsWith(github.ref, 'refs/tags/v') && '--publish always' || '--publish never' }}
+          # GITHUB_REF_TYPE avoids embedding " --publish always" inside a
+          # ${{ }} expression, which would be tokenized as two words and
+          # break the assignment.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            PUBLISH_FLAG="--publish always"
+          else
+            PUBLISH_FLAG="--publish never"
+          fi
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             # Universal installer plus arch-specific portables: a single
             # electron-builder run would also emit a merged 230 MB portable, so

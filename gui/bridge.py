@@ -352,7 +352,10 @@ def cmd_save_from_sd(params):
     local = Path(params["local_path"])
     local.parent.mkdir(parents=True, exist_ok=True)
     code = stream_deployer(["sd", "download", sd_path, str(local)], local.name)
-    return {"ok": code == 0, "message": f"Save downloaded to {local.name}." if code == 0 else "Failed to download save."}
+    return {
+        "ok": code == 0,
+        "message": f"Save downloaded to {local.name}." if code == 0 else "Failed to download save.",
+    }
 
 
 def cmd_deploy(params):
