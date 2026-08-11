@@ -72,27 +72,35 @@ jobs:
 
       - name: Package
         env:
-          GH_TOKEN: ${{ github.token }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         shell: bash
         run: |
-          # GITHUB_REF_TYPE avoids embedding the publish flag inside a
-          # template expression, which would be tokenized as two words and
-          # break the assignment.
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            PUBLISH_FLAG="--publish always"
-          else
-            PUBLISH_FLAG="--publish never"
-          fi
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             # Universal installer plus arch-specific portables: a single
             # electron-builder run would also emit a merged 230 MB portable, so
             # build each artifact in its own run instead.
-            npx electron-builder --win nsis --x64 --arm64 $PUBLISH_FLAG
-            npx electron-builder --win portable --x64 $PUBLISH_FLAG
-            npx electron-builder --win portable --arm64 $PUBLISH_FLAG
+            npx electron-builder --win nsis --x64 --arm64 --publish never
+            npx electron-builder --win portable --x64 --publish never
+            npx electron-builder --win portable --arm64 --publish never
           else
-            npx electron-builder ${{ matrix.args }} $PUBLISH_FLAG
+            npx electron-builder ${{ matrix.args }} --publish never
+          fi
+
+      # Publishing via gh release upload instead of electron-builder's
+      # --publish: electron-builder silently skipped publishing (release stayed
+      # at zero assets) even though the tag build steps reported success.
+      - name: Publish release assets (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          FILES=()
+          while IFS= read -r f; do
+            FILES+=("$f")
+          done < <(find dist -maxdepth 1 -type f \( -name '*.exe' -o -name '*.yml' -o -name '*.blockmap' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.pacman' \) ! -name 'builder-debug.yml')
+          if [ ${#FILES[@]} -gt 0 ]; then
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber
           fi
 
       - name: Upload artifacts
