@@ -102,13 +102,8 @@ code {
 .brand-mark {
   width: 30px;
   height: 30px;
-}
-.mark-body { stroke: var(--sc64-accent); stroke-width: 2; }
-.mark-chip { stroke: var(--sc64-accent2); stroke-width: 2; }
-.mark-dot { fill: var(--sc64-text); }
-.mark-glow {
-  fill: var(--sc64-accent);
-  filter: drop-shadow(0 0 6px var(--sc64-accent));
+  border-radius: 7px;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
 }
 
 .brand-name {
