@@ -3,6 +3,8 @@
 [![CI](https://github.com/exusxt/Summer-Breeze-GUI/actions/workflows/ci.yml/badge.svg)](https://github.com/exusxt/Summer-Breeze-GUI/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Releases](https://img.shields.io/github/v/release/exusxt/Summer-Breeze-GUI)](https://github.com/exusxt/Summer-Breeze-GUI/releases)
+[![Website](https://img.shields.io/badge/website-summerbreeze.gui-38bdf8)](https://exusxt.github.io/Summer-Breeze-GUI/)
+[![Wiki](https://img.shields.io/badge/wiki-docs-a78bfa)](https://github.com/exusxt/Summer-Breeze-GUI/wiki)
 
 A cross-platform desktop GUI for managing ROMs on your SummerCart64 flash cart,
 built on Electron with the Summer Breeze Python CLI doing the actual cart work
