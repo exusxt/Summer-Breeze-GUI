@@ -11,14 +11,14 @@
       'portable-arm64': [/.*-arm64\.exe$/]
     },
     macos: {
-      dmg: [/.*\.dmg$/],
-      maczip: [/.*\.zip$/]
+      dmg: [/^(?!.*-arm64).*\.dmg$/, /.*\.dmg$/],
+      maczip: [/^(?!.*-arm64).*\.zip$/, /.*\.zip$/]
     },
     linux: {
-      appimage: [/.*\.AppImage$/],
-      deb: [/.*\.deb$/],
-      rpm: [/.*\.rpm$/],
-      pacman: [/.*\.pacman$/]
+      appimage: [/^(?!.*-arm64).*\.AppImage$/, /.*\.AppImage$/],
+      deb: [/^(?!.*-arm64).*\.deb$/, /.*\.deb$/],
+      rpm: [/^(?!.*-aarch64).*\.rpm$/, /.*\.rpm$/],
+      pacman: [/^(?!.*-aarch64).*\.pacman$/, /.*\.pacman$/]
     }
   };
 
