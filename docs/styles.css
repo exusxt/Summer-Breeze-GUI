@@ -227,6 +227,11 @@ code {
   font-size: 13px;
   border-radius: 10px;
 }
+/* .nav-links a would otherwise force the muted link color onto the primary
+   button; keep the dark label that reads well on the accent gradient. */
+.nav-links .nav-cta {
+  color: #04101a;
+}
 .nav-toggle {
   display: none;
   background: none;
